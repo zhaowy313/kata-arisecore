@@ -8,9 +8,12 @@ export type PartialRecursive<T> = {
  * @param defaults
  * @param config
  */
-export default function makeConfig<T>(defaults: T, config: PartialRecursive<T> & { [key: string]: any }): T {
+export default function makeConfig<T>(
+  defaults: T,
+  config: PartialRecursive<T> & { [key: string]: any },
+): T {
   const mergedConfig: any = {};
-  const defaultKeys = Object.keys(defaults);
+  const defaultKeys = Object.keys(defaults as any);
   defaultKeys.forEach((key) => {
     const val = (config as any)[key];
     const defVal = (defaults as any)[key];

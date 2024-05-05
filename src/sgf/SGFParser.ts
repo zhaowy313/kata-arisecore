@@ -50,7 +50,7 @@ export class SGFParser {
     context = new SGFParsingContext(),
   ): string {
     if (optional && context.currentNonWhitespaceChar(sgfString) !== '[') {
-      return;
+      return '';
     }
 
     let value = '';
@@ -144,7 +144,10 @@ export class SGFParser {
    * @param sgfString
    * @param context Internal state of the parsing. This should never be set.
    */
-  parseProperty(sgfString: string, context = new SGFParsingContext()): [PropIdent, string[]] {
+  parseProperty(
+    sgfString: string,
+    context = new SGFParsingContext(),
+  ): [PropIdent, string[]] | undefined {
     if (!isCharUCLetter(context.currentNonWhitespaceChar(sgfString))) {
       return;
     }
@@ -165,7 +168,7 @@ export class SGFParser {
     context.assertCharAndMoveToNext(sgfString, ';');
 
     const properties: SGFProperties = {};
-    let property: [PropIdent, string[]];
+    let property: [PropIdent, string[]] | undefined;
 
     while ((property = this.parseProperty(sgfString, context))) {
       properties[property[0]] = property[1];

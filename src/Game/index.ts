@@ -6,3 +6,4 @@ export * from './rules/Rules';
 export * from './rules/sgfRulesMap';
 export * from './BoardPosition';
 export * from './GameState';
+export * from './Game';

@@ -1,5 +1,10 @@
-import { Color } from '../types';
+import { Color, Vector } from '../types';
 import { BoardPosition } from './BoardPosition';
+
+export interface GameStateProperties {
+  boardSection?: Readonly<Vector>;
+  dim?: readonly Vector[];
+}
 
 /**
  * Represents state of go game in one exact turn. This includes position, captured stones and player to move.
@@ -9,7 +14,7 @@ export class GameState {
    * Additional properties related to game state. Can be used to store some additional info for special go rules
    * or other purposes. When cloning, this will be shallow copied.
    */
-  properties: Record<string, any> = {};
+  properties: GameStateProperties = {};
 
   constructor(
     public position: BoardPosition = new BoardPosition(),

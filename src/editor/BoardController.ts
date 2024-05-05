@@ -53,7 +53,7 @@ export class BoardController<T extends Board> {
   #variationsStyle: VariationsStyle = VariationsStyle.None;
 
   #handleGameLoad = () => {
-    const { rows, cols } = this.editor.gameState.position;
+    const { rows, cols } = this.editor.getGameState().position;
     this.board.setSize(cols, rows);
     this.#variationsStyle = this.#getVariationsStyle();
   };
@@ -153,7 +153,7 @@ export class BoardController<T extends Board> {
     // Remove missing stones in current position
     this.#stoneBoardObjects = this.#stoneBoardObjects.filter((boardObject) => {
       if (
-        this.editor.gameState.position.get(boardObject.x, boardObject.y) !==
+        this.editor.getGameState().position.get(boardObject.x, boardObject.y) !==
         colorsMap[boardObject.type]
       ) {
         this.board.removeObject(boardObject);
@@ -163,7 +163,7 @@ export class BoardController<T extends Board> {
     });
 
     // Add new stones from current position
-    const position = this.editor.gameState.position;
+    const position = this.editor.getGameState().position;
 
     for (let x = 0; x < position.cols; x++) {
       for (let y = 0; y < position.rows; y++) {
@@ -232,14 +232,14 @@ export class BoardController<T extends Board> {
           markup.text,
           markup.x,
           markup.y,
-          this.editor.gameState.position.get(markup.x, markup.y),
+          this.editor.getGameState().position.get(markup.x, markup.y),
         );
       } else if ('x' in markup) {
         boardMarkup = new MarkupBoardObject(
           markup.type,
           markup.x,
           markup.y,
-          this.editor.gameState.position.get(markup.x, markup.y),
+          this.editor.getGameState().position.get(markup.x, markup.y),
         );
       } else {
         boardMarkup = new LineBoardObject(
@@ -254,7 +254,7 @@ export class BoardController<T extends Board> {
     });
 
     // Not sure if this is optimal for dimming, probably not the most performant solution
-    this.editor.gameState.properties.dim?.forEach((dim: Vector) => {
+    this.editor.getGameState().properties.dim?.forEach((dim: Vector) => {
       const boardMarkup = new LineBoardObject(
         'DD',
         { x: dim.x1, y: dim.y1 },
@@ -267,7 +267,7 @@ export class BoardController<T extends Board> {
   }
 
   #updateViewport() {
-    const { boardSection } = this.editor.gameState.properties;
+    const { boardSection } = this.editor.getGameState().properties;
 
     if (boardSection) {
       const minX = Math.min(boardSection.x1, boardSection.x2);

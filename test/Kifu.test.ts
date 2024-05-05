@@ -56,14 +56,14 @@ describe('Kifu object', () => {
     const kifu = Kifu.fromSGF('(;C[1](;C[2a];C[3a](;C[4aa])(;C[4ab]))(;C[2b];C[3b]))');
     strictEqual(kifu.getNode(0)?.comment, '1');
     strictEqual(kifu.getNode(3)?.comment, '4aa');
-    strictEqual(kifu.getNode(4), null);
+    strictEqual(kifu.getNode(4), undefined);
   });
 
   it('Method getNode with path object argument', () => {
     const kifu = Kifu.fromSGF('(;C[1](;C[2a];C[3a](;C[4aa])(;C[4ab]))(;C[2b];C[3b]))');
     strictEqual(kifu.getNode({ moveNumber: 3, variations: [0, 1] })?.comment, '4ab');
     strictEqual(kifu.getNode({ moveNumber: 2, variations: [1] })?.comment, '3b');
-    strictEqual(kifu.getNode({ moveNumber: 2, variations: [2] }), null);
+    strictEqual(kifu.getNode({ moveNumber: 2, variations: [2] }), undefined);
   });
 
   it('Method getPath works for root node', () => {
@@ -100,6 +100,6 @@ describe('Kifu object', () => {
     strictEqual(firstMove?.node, kifu.root.children[0].children[0].children[1]);
 
     const firstSetup = kifu.find((node) => node.setup.length > 0);
-    strictEqual(firstSetup, null);
+    strictEqual(firstSetup, undefined);
   });
 });

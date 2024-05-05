@@ -1,22 +1,20 @@
-import assert, { deepStrictEqual, notStrictEqual, strict, strictEqual, throws } from 'assert';
+import assert, { deepStrictEqual, strictEqual } from 'assert';
 import { Editor } from '../src/editor';
-import { ING_RULES, KoRule, BoardPosition } from '../src/game';
 import { Kifu, KifuNode } from '../src/kifu';
 import { Color } from '../src/types';
+import { IngRules, sgfRulesMap } from '../src/game';
 
 describe('Editor object', () => {
   describe('Methods for loading Kifu', () => {
     it('New game without any options', () => {
       const editor = new Editor();
       editor.newGame();
+      const gameState = editor.getGameState();
 
-      strictEqual(editor.gameState.position.cols, 19);
-      strictEqual(editor.gameState.position.rows, 19);
-      strictEqual(editor.gameEvaluator.rules.allowRewrite, false);
-      strictEqual(editor.gameEvaluator.rules.allowSuicide, false);
-      strictEqual(editor.gameEvaluator.rules.koRule, KoRule.Ko);
-      strictEqual(editor.gameEvaluator.rules.komi, 6.5);
-      strictEqual(editor.gameState.player, Color.Black);
+      strictEqual(gameState.position.cols, 19);
+      strictEqual(gameState.position.rows, 19);
+      strictEqual(editor.getRules(), editor.config.defaultRules);
+      strictEqual(gameState.player, Color.Black);
 
       strictEqual(editor.kifu.info.boardSize, 19);
       strictEqual(editor.kifu.info.komi, 6.5);
@@ -27,14 +25,13 @@ describe('Editor object', () => {
 
     it('New game with custom size and rules', () => {
       const editor = new Editor();
-      editor.newGame({ cols: 9, rows: 13 }, ING_RULES);
+      const rules = new IngRules();
+      editor.newGame({ size: { cols: 9, rows: 13 }, rules, komi: 7.5 });
+      const gameState = editor.getGameState();
 
-      strictEqual(editor.gameState.position.cols, 9);
-      strictEqual(editor.gameState.position.rows, 13);
-      strictEqual(editor.gameEvaluator.rules.allowRewrite, false);
-      strictEqual(editor.gameEvaluator.rules.allowSuicide, true);
-      strictEqual(editor.gameEvaluator.rules.koRule, KoRule.SituationalSuperKo);
-
+      strictEqual(gameState.position.cols, 9);
+      strictEqual(gameState.position.rows, 13);
+      strictEqual(editor.getRules(), rules);
       deepStrictEqual(editor.kifu.info.boardSize, { cols: 9, rows: 13 });
       strictEqual(editor.kifu.info.rules, 'GOE');
       strictEqual(editor.kifu.info.komi, 7.5);
@@ -46,14 +43,12 @@ describe('Editor object', () => {
       const editor = new Editor();
       const kifu = Kifu.fromSGF('(;SZ[9]RU[GOE])');
       editor.loadKifu(kifu);
+      const gameState = editor.getGameState();
 
-      strictEqual(editor.gameState.position.cols, 9);
-      strictEqual(editor.gameState.position.rows, 9);
-      strictEqual(editor.gameEvaluator.rules.allowRewrite, false);
-      strictEqual(editor.gameEvaluator.rules.allowSuicide, true);
-      strictEqual(editor.gameEvaluator.rules.koRule, KoRule.SituationalSuperKo);
-      strictEqual(editor.gameEvaluator.rules.komi, 7.5);
-      strictEqual(editor.gameState.player, Color.Black);
+      strictEqual(gameState.position.cols, 9);
+      strictEqual(gameState.position.rows, 9);
+      strictEqual(editor.getRules(), sgfRulesMap.GOE);
+      strictEqual(gameState.player, Color.Black);
 
       assert(editor.kifu.info.komi == null);
       strictEqual(editor.kifu.info.rules, 'GOE');
@@ -67,38 +62,38 @@ describe('Editor object', () => {
       const editor = new Editor();
       const kifu = Kifu.fromSGF('(;SZ[19]RU[Japanese]HA[3]KM[0]AB[ab][ba][bb])');
       editor.loadKifu(kifu);
+      let gameState = editor.getGameState();
 
-      strictEqual(editor.gameEvaluator.rules.komi, 0);
-      deepStrictEqual(editor.gameState.position.get(0, 1), Color.Black);
-      deepStrictEqual(editor.gameState.position.get(1, 0), Color.Black);
-      deepStrictEqual(editor.gameState.position.get(1, 1), Color.Black);
-      strictEqual(editor.gameState.player, Color.White);
+      deepStrictEqual(gameState.position.get(0, 1), Color.Black);
+      deepStrictEqual(gameState.position.get(1, 0), Color.Black);
+      deepStrictEqual(gameState.position.get(1, 1), Color.Black);
+      strictEqual(gameState.player, Color.White);
 
       strictEqual(editor.kifu.info.handicap, 3);
 
       editor.loadKifu(Kifu.fromSGF('(;SZ[9]RU[GOE])'));
 
-      strictEqual(editor.gameEvaluator.rules.komi, 7.5);
+      gameState = editor.getGameState();
       strictEqual(editor.kifu.info.rules, 'GOE');
       strictEqual(editor.kifu.info.boardSize, 9);
-      deepStrictEqual(editor.gameState.position.get(0, 1), Color.Empty);
-      deepStrictEqual(editor.gameState.position.get(1, 0), Color.Empty);
-      deepStrictEqual(editor.gameState.position.get(1, 1), Color.Empty);
+      deepStrictEqual(gameState.position.get(0, 1), Color.Empty);
+      deepStrictEqual(gameState.position.get(1, 0), Color.Empty);
+      deepStrictEqual(gameState.position.get(1, 1), Color.Empty);
     });
 
     it('Player is correctly set, when HA property is present', () => {
       const editor = new Editor();
       editor.loadKifu(Kifu.fromSGF('(;HA[0])'));
-      strictEqual(editor.gameState.player, Color.Black);
+      strictEqual(editor.getGameState().player, Color.Black);
 
       editor.loadKifu(Kifu.fromSGF('(;HA[1]PL[W])'));
-      strictEqual(editor.gameState.player, Color.White);
+      strictEqual(editor.getGameState().player, Color.White);
 
       editor.loadKifu(Kifu.fromSGF('(;HA[2])'));
-      strictEqual(editor.gameState.player, Color.White);
+      strictEqual(editor.getGameState().player, Color.White);
 
       editor.loadKifu(Kifu.fromSGF('(;HA[3]PL[B])'));
-      strictEqual(editor.gameState.player, Color.Black);
+      strictEqual(editor.getGameState().player, Color.Black);
     });
   });
 
@@ -108,25 +103,28 @@ describe('Editor object', () => {
       editor.loadKifu(Kifu.fromSGF('(;SZ[9];B[aa];W[bb](;AB[ab][ac]PL[W])(;AW[ab][ac]))'));
 
       assert(editor.next());
+      let gameState = editor.getGameState();
       deepStrictEqual(editor.currentNode.move, { x: 0, y: 0, c: Color.Black });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.player, Color.White);
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.player, Color.White);
       deepStrictEqual(editor.currentPath, { moveNumber: 1, variations: [] });
 
       assert(editor.next());
+      gameState = editor.getGameState();
       deepStrictEqual(editor.currentNode.move, { x: 1, y: 1, c: Color.White });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.White);
-      strictEqual(editor.gameState.player, Color.Black);
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.White);
+      strictEqual(gameState.player, Color.Black);
       deepStrictEqual(editor.currentPath, { moveNumber: 2, variations: [] });
 
       assert(editor.next());
+      gameState = editor.getGameState();
       deepStrictEqual(editor.currentNode.player, Color.White);
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(0, 1), Color.Black);
-      strictEqual(editor.gameState.position.get(0, 2), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.White);
-      strictEqual(editor.gameState.player, Color.White);
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(0, 1), Color.Black);
+      strictEqual(gameState.position.get(0, 2), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.White);
+      strictEqual(gameState.player, Color.White);
       deepStrictEqual(editor.currentPath, { moveNumber: 3, variations: [0] });
 
       assert(!editor.next());
@@ -143,11 +141,12 @@ describe('Editor object', () => {
       assert(editor.next(kifu.root.children[0].children[0]));
       assert(editor.next(1));
       strictEqual(editor.currentNode, kifu.root.children[0].children[0].children[1]);
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(0, 1), Color.White);
-      strictEqual(editor.gameState.position.get(0, 2), Color.White);
-      strictEqual(editor.gameState.position.get(1, 1), Color.White);
-      strictEqual(editor.gameState.player, Color.Black);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(0, 1), Color.White);
+      strictEqual(gameState.position.get(0, 2), Color.White);
+      strictEqual(gameState.position.get(1, 1), Color.White);
+      strictEqual(gameState.player, Color.Black);
       deepStrictEqual(editor.currentPath, { moveNumber: 3, variations: [1] });
 
       assert(!editor.next());
@@ -160,16 +159,17 @@ describe('Editor object', () => {
 
       editor.next();
 
-      strictEqual(editor.gameState.position.get(0, 0), Color.Empty);
-      strictEqual(editor.gameState.position.get(0, 1), Color.Empty);
-      strictEqual(editor.gameState.position.get(1, 0), Color.Empty);
-      strictEqual(editor.gameState.position.get(1, 1), Color.Empty);
-      strictEqual(editor.gameState.position.get(0, 2), Color.White);
-      strictEqual(editor.gameState.position.get(1, 2), Color.White);
-      strictEqual(editor.gameState.position.get(2, 0), Color.White);
-      strictEqual(editor.gameState.position.get(2, 1), Color.White);
-      strictEqual(editor.gameState.blackCaptures, 0);
-      strictEqual(editor.gameState.whiteCaptures, 4);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Empty);
+      strictEqual(gameState.position.get(0, 1), Color.Empty);
+      strictEqual(gameState.position.get(1, 0), Color.Empty);
+      strictEqual(gameState.position.get(1, 1), Color.Empty);
+      strictEqual(gameState.position.get(0, 2), Color.White);
+      strictEqual(gameState.position.get(1, 2), Color.White);
+      strictEqual(gameState.position.get(2, 0), Color.White);
+      strictEqual(gameState.position.get(2, 1), Color.White);
+      strictEqual(gameState.blackCaptures, 0);
+      strictEqual(gameState.whiteCaptures, 4);
     });
 
     it('Suicide works', () => {
@@ -179,16 +179,17 @@ describe('Editor object', () => {
 
       editor.next();
 
-      strictEqual(editor.gameState.position.get(0, 0), Color.Empty);
-      strictEqual(editor.gameState.position.get(0, 1), Color.Empty);
-      strictEqual(editor.gameState.position.get(1, 0), Color.Empty);
-      strictEqual(editor.gameState.position.get(1, 1), Color.Empty);
-      strictEqual(editor.gameState.position.get(0, 2), Color.White);
-      strictEqual(editor.gameState.position.get(1, 2), Color.White);
-      strictEqual(editor.gameState.position.get(2, 0), Color.White);
-      strictEqual(editor.gameState.position.get(2, 1), Color.White);
-      strictEqual(editor.gameState.blackCaptures, 0);
-      strictEqual(editor.gameState.whiteCaptures, 4);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Empty);
+      strictEqual(gameState.position.get(0, 1), Color.Empty);
+      strictEqual(gameState.position.get(1, 0), Color.Empty);
+      strictEqual(gameState.position.get(1, 1), Color.Empty);
+      strictEqual(gameState.position.get(0, 2), Color.White);
+      strictEqual(gameState.position.get(1, 2), Color.White);
+      strictEqual(gameState.position.get(2, 0), Color.White);
+      strictEqual(gameState.position.get(2, 1), Color.White);
+      strictEqual(gameState.blackCaptures, 0);
+      strictEqual(gameState.whiteCaptures, 4);
     });
 
     it('Simple previous works', () => {
@@ -202,24 +203,27 @@ describe('Editor object', () => {
 
       assert(editor.previous());
       deepStrictEqual(editor.currentNode.move, { x: 1, y: 1, c: Color.White });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.White);
-      strictEqual(editor.gameState.player, Color.Black);
+      let gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.White);
+      strictEqual(gameState.player, Color.Black);
       deepStrictEqual(editor.currentPath, { moveNumber: 2, variations: [] });
-      strictEqual(editor.gameState.position.get(0, 1), Color.Empty);
-      strictEqual(editor.gameState.position.get(0, 2), Color.Empty);
+      strictEqual(gameState.position.get(0, 1), Color.Empty);
+      strictEqual(gameState.position.get(0, 2), Color.Empty);
 
       assert(editor.previous());
+      gameState = editor.getGameState();
       deepStrictEqual(editor.currentNode.move, { x: 0, y: 0, c: Color.Black });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.player, Color.White);
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.player, Color.White);
       deepStrictEqual(editor.currentPath, { moveNumber: 1, variations: [] });
-      strictEqual(editor.gameState.position.get(1, 1), Color.Empty);
+      strictEqual(gameState.position.get(1, 1), Color.Empty);
 
       assert(editor.previous());
+      gameState = editor.getGameState();
       strictEqual(editor.currentNode, kifu.root);
-      strictEqual(editor.gameState.player, Color.Black);
-      strictEqual(editor.gameState.position.get(0, 0), Color.Empty);
+      strictEqual(gameState.player, Color.Black);
+      strictEqual(gameState.position.get(0, 0), Color.Empty);
       deepStrictEqual(editor.currentPath, { moveNumber: 0, variations: [] });
 
       assert(!editor.previous());
@@ -233,16 +237,17 @@ describe('Editor object', () => {
       editor.next();
       editor.previous();
 
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(0, 1), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.Black);
-      strictEqual(editor.gameState.position.get(0, 2), Color.White);
-      strictEqual(editor.gameState.position.get(1, 2), Color.White);
-      strictEqual(editor.gameState.position.get(2, 0), Color.White);
-      strictEqual(editor.gameState.position.get(2, 1), Color.Empty);
-      strictEqual(editor.gameState.blackCaptures, 0);
-      strictEqual(editor.gameState.whiteCaptures, 0);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(0, 1), Color.Black);
+      strictEqual(gameState.position.get(1, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.Black);
+      strictEqual(gameState.position.get(0, 2), Color.White);
+      strictEqual(gameState.position.get(1, 2), Color.White);
+      strictEqual(gameState.position.get(2, 0), Color.White);
+      strictEqual(gameState.position.get(2, 1), Color.Empty);
+      strictEqual(gameState.blackCaptures, 0);
+      strictEqual(gameState.whiteCaptures, 0);
     });
 
     it('Go to last node', () => {
@@ -253,11 +258,12 @@ describe('Editor object', () => {
       assert(editor.last());
       deepStrictEqual(editor.currentNode.move, { c: Color.Black, x: 0, y: 1 });
       deepStrictEqual(editor.currentPath, { moveNumber: 3, variations: [0, 0] });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.White);
-      strictEqual(editor.gameState.position.get(0, 1), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 0), Color.Empty);
-      strictEqual(editor.gameState.player, Color.White);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.White);
+      strictEqual(gameState.position.get(0, 1), Color.Black);
+      strictEqual(gameState.position.get(1, 0), Color.Empty);
+      strictEqual(gameState.player, Color.White);
       assert(!editor.last());
     });
 
@@ -274,13 +280,15 @@ describe('Editor object', () => {
       editor.previous();
 
       assert(editor.last());
+
       deepStrictEqual(editor.currentNode.move, { c: Color.Black, x: 1, y: 0 });
       deepStrictEqual(editor.currentPath, { moveNumber: 3, variations: [0, 1] });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.White);
-      strictEqual(editor.gameState.position.get(1, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(0, 1), Color.Empty);
-      strictEqual(editor.gameState.player, Color.White);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.White);
+      strictEqual(gameState.position.get(1, 0), Color.Black);
+      strictEqual(gameState.position.get(0, 1), Color.Empty);
+      strictEqual(gameState.player, Color.White);
       assert(!editor.last());
     });
 
@@ -288,17 +296,17 @@ describe('Editor object', () => {
       const editor = new Editor();
       const kifu = Kifu.fromSGF('(;SZ[9](;B[aa];W[bb](;B[ab])(;B[ba]))(;B[bb];W[aa]))');
       editor.loadKifu(kifu);
-
       editor.last();
 
       assert(editor.first());
       strictEqual(editor.currentNode, editor.kifu.root);
       deepStrictEqual(editor.currentPath, { moveNumber: 0, variations: [] });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Empty);
-      strictEqual(editor.gameState.position.get(1, 1), Color.Empty);
-      strictEqual(editor.gameState.position.get(1, 0), Color.Empty);
-      strictEqual(editor.gameState.position.get(0, 1), Color.Empty);
-      strictEqual(editor.gameState.player, Color.Black);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Empty);
+      strictEqual(gameState.position.get(1, 1), Color.Empty);
+      strictEqual(gameState.position.get(1, 0), Color.Empty);
+      strictEqual(gameState.position.get(0, 1), Color.Empty);
+      strictEqual(gameState.player, Color.Black);
       assert(!editor.first());
     });
 
@@ -310,15 +318,17 @@ describe('Editor object', () => {
       assert(editor.goTo(2));
       deepStrictEqual(editor.currentNode.move, { c: Color.White, x: 1, y: 1 });
       deepStrictEqual(editor.currentPath, { moveNumber: 2, variations: [0] });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.White);
-      strictEqual(editor.gameState.player, Color.Black);
+      let gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.White);
+      strictEqual(gameState.player, Color.Black);
       assert(editor.goTo(1));
       deepStrictEqual(editor.currentNode.move, { c: Color.Black, x: 0, y: 0 });
       deepStrictEqual(editor.currentPath, { moveNumber: 1, variations: [0] });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.Empty);
-      strictEqual(editor.gameState.player, Color.White);
+      gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.Empty);
+      strictEqual(gameState.player, Color.White);
       assert(!editor.goTo(4));
     });
 
@@ -330,9 +340,10 @@ describe('Editor object', () => {
       assert(editor.goTo({ moveNumber: 2, variations: [1] }));
       deepStrictEqual(editor.currentNode.move, { c: Color.White, x: 0, y: 0 });
       deepStrictEqual(editor.currentPath, { moveNumber: 2, variations: [1] });
-      strictEqual(editor.gameState.position.get(1, 1), Color.Black);
-      strictEqual(editor.gameState.position.get(0, 0), Color.White);
-      strictEqual(editor.gameState.player, Color.Black);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(1, 1), Color.Black);
+      strictEqual(gameState.position.get(0, 0), Color.White);
+      strictEqual(gameState.player, Color.Black);
       assert(!editor.goTo({ moveNumber: 3, variations: [1] }));
     });
 
@@ -344,9 +355,10 @@ describe('Editor object', () => {
       assert(editor.goTo(kifu.root.children[0].children[0].children[1]));
       deepStrictEqual(editor.currentNode.move, { c: Color.Black, x: 1, y: 0 });
       deepStrictEqual(editor.currentPath, { moveNumber: 3, variations: [0, 1] });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.White);
-      strictEqual(editor.gameState.position.get(1, 0), Color.Black);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.White);
+      strictEqual(gameState.position.get(1, 0), Color.Black);
       assert(!editor.goTo(new KifuNode()));
     });
 
@@ -361,9 +373,10 @@ describe('Editor object', () => {
       assert(!editor.goTo(3));
       deepStrictEqual(editor.currentNode.move, { c: Color.White, x: 0, y: 0 });
       deepStrictEqual(editor.currentPath, { moveNumber: 2, variations: [1] });
-      strictEqual(editor.gameState.position.get(1, 1), Color.Black);
-      strictEqual(editor.gameState.position.get(0, 0), Color.White);
-      strictEqual(editor.gameState.player, Color.Black);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(1, 1), Color.Black);
+      strictEqual(gameState.position.get(0, 0), Color.White);
+      strictEqual(gameState.player, Color.Black);
       assert(!editor.last());
     });
 
@@ -378,11 +391,12 @@ describe('Editor object', () => {
       strictEqual(editor.currentNode.comment, 'foo');
       deepStrictEqual(editor.currentNode.move, { c: Color.Black, x: 0, y: 1 });
       deepStrictEqual(editor.currentPath, { moveNumber: 3, variations: [0, 0] });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.White);
-      strictEqual(editor.gameState.position.get(0, 1), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 0), Color.Empty);
-      strictEqual(editor.gameState.player, Color.White);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.White);
+      strictEqual(gameState.position.get(0, 1), Color.Black);
+      strictEqual(gameState.position.get(1, 0), Color.Empty);
+      strictEqual(gameState.player, Color.White);
 
       const node = editor.currentNode;
       assert(!editor.nextMatch((node) => !!node.comment));
@@ -425,10 +439,11 @@ describe('Editor object', () => {
       strictEqual(editor.currentNode.comment, 'baz');
       deepStrictEqual(editor.currentNode.move, { c: Color.Black, x: 0, y: 0 });
       deepStrictEqual(editor.currentPath, { moveNumber: 1, variations: [0] });
-      strictEqual(editor.gameState.position.get(0, 0), Color.Black);
-      strictEqual(editor.gameState.position.get(1, 1), Color.Empty);
-      strictEqual(editor.gameState.position.get(0, 1), Color.Empty);
-      strictEqual(editor.gameState.player, Color.White);
+      const gameState = editor.getGameState();
+      strictEqual(gameState.position.get(0, 0), Color.Black);
+      strictEqual(gameState.position.get(1, 1), Color.Empty);
+      strictEqual(gameState.position.get(0, 1), Color.Empty);
+      strictEqual(gameState.player, Color.White);
       assert(editor.previousMatch((node) => !!node.comment));
       strictEqual(editor.currentNode, editor.kifu.root);
       strictEqual(editor.currentNode.comment, 'bar');
@@ -451,7 +466,7 @@ describe('Editor object', () => {
       assert(!editor.isValidMove(0, 9));
       assert(!editor.isValidMove(9, 0));
       assert(editor.isValidMove(0, 0));
-      strictEqual(editor.gameState.position.get(0, 0), Color.Empty);
+      strictEqual(editor.getGameState().position.get(0, 0), Color.Empty);
     });
 
     it('Validation of ko works', () => {
