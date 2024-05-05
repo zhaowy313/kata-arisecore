@@ -14,7 +14,6 @@ import {
 import { defaultBoardBaseConfig } from '../BoardBase/defaultConfig';
 import defaultSVGTheme from './defaultSVGTheme';
 import generateId from './generateId';
-import { Point } from '../types';
 
 const svgBoardDefaultConfig: SVGBoardConfig = {
   ...defaultBoardBaseConfig,
@@ -296,38 +295,5 @@ export default class SVGBoard extends BoardBase {
     super.setCoordinates(coordinates);
     this.contexts.coordinatesElement.style.opacity = this.config.coordinates ? '' : '0';
     this.setViewport();
-  }
-
-  on(type: string, callback: (event: Event & { point?: Point }) => void) {
-    super.on(type, callback);
-    this.registerBoardListener(type);
-  }
-
-  registerBoardListener(type: string) {
-    this.touchArea.addEventListener(type, (evt) => {
-      if ((evt as any).layerX != null) {
-        const pos = this.getRelativeCoordinates((evt as any).layerX, (evt as any).layerY);
-        this.emit(type, { ...evt, point: pos });
-      } else {
-        this.emit(type, evt);
-      }
-    });
-  }
-
-  getRelativeCoordinates(absoluteX: number, absoluteY: number) {
-    // new hopefully better translation of coordinates
-
-    const fieldWidth = this.touchArea.offsetWidth / this.right;
-    const fieldHeight = this.touchArea.offsetHeight / this.bottom;
-
-    const x = Math.round(absoluteX / fieldWidth + this.left);
-    const y = Math.round(absoluteY / fieldHeight + this.top);
-    const size = this.getSize();
-
-    if (x < 0 || x >= size.x || y < 0 || y >= size.y) {
-      return null;
-    }
-
-    return { x, y };
   }
 }

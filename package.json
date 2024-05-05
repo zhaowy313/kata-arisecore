@@ -4,6 +4,7 @@
   "description": "JavaScript library for game of Go",
   "main": "dist/index.js",
   "scripts": {
+    "dev": "vite",
     "build": "rollup -c rollup.config.js",
     "watch": "rollup -c rollup.config.js -w",
     "test": "mocha --extension ts --require ts-node/register"
@@ -25,7 +26,7 @@
   "homepage": "http://waltheri.github.io/wgo.js",
   "devDependencies": {
     "@types/mocha": "^5.2.6",
-    "@types/node": "^12.0.0",
+    "@types/node": "^20.8.8",
     "@typescript-eslint/eslint-plugin": "^6.7.0",
     "@typescript-eslint/parser": "^6.7.0",
     "chai": "^4.2.0",
@@ -35,10 +36,10 @@
     "eslint-plugin-prettier": "^5.0.0",
     "mocha": "^6.1.4",
     "prettier": "^3.0.3",
-    "rollup": "^2.27.1",
-    "rollup-plugin-typescript2": "^0.27.2",
     "ts-node": "^8.1.0",
     "tslib": "^2.0.1",
-    "typescript": "^4.9.5"
+    "typedoc": "^0.25.1",
+    "typescript": "^4.9.5",
+    "vite": "^4.5.0"
   }
 }

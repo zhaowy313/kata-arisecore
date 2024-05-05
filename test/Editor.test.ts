@@ -1,6 +1,6 @@
 import assert, { deepStrictEqual, notStrictEqual, strict, strictEqual, throws } from 'assert';
 import { Editor } from '../src/editor';
-import { ING_RULES, KoRule, Position } from '../src/game';
+import { ING_RULES, KoRule, BoardPosition } from '../src/game';
 import { Kifu, KifuNode } from '../src/kifu';
 import { Color } from '../src/types';
 
@@ -543,5 +543,34 @@ describe('Editor object', () => {
       editor.next();
       deepStrictEqual(editor.getVariations(), [kifu.root.children[0].children[0].children[1]]);
     });
+
+    //it('Getting current markup', () => {
+    //  const editor = new Editor();
+    //  const kifu = Kifu.fromSGF('(;SZ[9]TR[aa];SQ[ab][ba]CR[bb];B[aa])');
+    //  editor.loadKifu(kifu);
+
+    //  deepStrictEqual(editor.getMarkup(), kifu.root.markup);
+    //  editor.next();
+    //  deepStrictEqual(editor.getMarkup(), kifu.root.children[0].markup);
+    //  editor.next();
+    //  deepStrictEqual(editor.getMarkup(), []);
+    //});
+
+    //it('Getting inherited markup too', () => {
+    //  const editor = new Editor();
+    //  const kifu = Kifu.fromSGF('(;SZ[9]DD[aa];SQ[ab][ba]CR[bb];B[aa]DD[];CR[cc])');
+    //  editor.loadKifu(kifu);
+
+    //  deepStrictEqual(editor.getMarkup(), [{ type: 'DD', x: 0, y: 0 }]);
+    //  editor.next();
+    //  deepStrictEqual(editor.getMarkup(), [
+    //    { type: 'DD', x: 0, y: 0 },
+    //    ...editor.currentNode.markup,
+    //  ]);
+    //  editor.next();
+    //  deepStrictEqual(editor.getMarkup(), []);
+    //  editor.next();
+    //  deepStrictEqual(editor.getMarkup(), [{ type: 'CR', x: 2, y: 2 }]);
+    //});
   });
 });

@@ -64,24 +64,26 @@ export interface KifuPath {
  * ```
  */
 export class Kifu {
-  constructor(
-    /**
-     * Information about the game recorded in this kifu. It is related to the whole game, not to a single node.
-     * If omitted, empty info object is used.
-     */
-    public info = new KifuInfo(),
-    /**
-     * Root node of the kifu. Must be set, even if it is empty.
-     * If omitted, empty node is used.
-     */
-    public root = new KifuNode(),
-  ) {}
+  /**
+   * Information about the game recorded in this kifu. It is related to the whole game, not to a single node.
+   */
+  info: KifuInfo;
+
+  /**
+   * Root node of the kifu. Must be set, even if it is empty.
+   */
+  root: KifuNode;
+
+  constructor(info: KifuInfo | Partial<KifuInfo> = new KifuInfo(), root = new KifuNode()) {
+    this.info = info instanceof KifuInfo ? info : KifuInfo.fromJS(info);
+    this.root = root;
+  }
 
   /**
    * Get KifuNode located on specified path in the kifu. You can also pass number, in that case
    * it will corresponds to move number.
    */
-  getNode(path: KifuPath | number): KifuNode | null {
+  getNode(path: KifuPath | number): KifuNode | undefined {
     const moveNumber = typeof path === 'number' ? path : path.moveNumber;
     const variations = typeof path === 'number' ? [] : path.variations;
     let node = this.root;
@@ -89,7 +91,7 @@ export class Kifu {
 
     for (let i = 0; i < moveNumber; i++) {
       if (!node.children.length) {
-        return null;
+        return undefined;
       } else if (node.children.length > 1) {
         node = node.children[variations[varCount] || 0];
         varCount++;
@@ -98,7 +100,7 @@ export class Kifu {
       }
 
       if (!node) {
-        return null;
+        return undefined;
       }
     }
 
@@ -106,23 +108,23 @@ export class Kifu {
   }
 
   /**
-   * Finds path of specified node. If kifu doesn't contain the node, null is returned. This method
+   * Finds path to the specified node. If kifu doesn't contain the node, null is returned. This method
    * uses breadth-first search to find the node.
    */
-  getPath(node: KifuNode): KifuPath | null {
+  getPath(node: KifuNode): KifuPath | undefined {
     return this.#bfs((n) => n === node)?.path;
   }
 
   /**
-   * Find and go to the first node in the kifu which matches the predicate. If there is no such node, null is returned.
+   * Find the first node in the kifu which matches the predicate. If there is no such node, null is returned.
    * You can specify starting path, from which the search will begin (excluding the node on that path).
    *
-   * This method uses breadth-first search to find the node.
+   * This method uses breadth-first search to find the node. Path to the found node is also returned.
    */
   find(
     predicate: (node: KifuNode) => boolean,
     startingPath?: KifuPath,
-  ): { node: KifuNode; path: KifuPath } | null {
+  ): { node: KifuNode; path: KifuPath } | undefined {
     return this.#bfs(predicate, startingPath);
   }
 
@@ -153,7 +155,7 @@ export class Kifu {
   #bfs(
     predicate: (node: KifuNode) => boolean,
     fromPath?: KifuPath,
-  ): { node: KifuNode; path: KifuPath } | null {
+  ): { node: KifuNode; path: KifuPath } | undefined {
     const queue: Array<{ node: KifuNode; path: KifuPath }> = [];
 
     if (fromPath) {
@@ -174,7 +176,7 @@ export class Kifu {
       queue.push(...childrenWithPaths(item.node, item.path));
     }
 
-    return null;
+    return undefined;
   }
 
   /**

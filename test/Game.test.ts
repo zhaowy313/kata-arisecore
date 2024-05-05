@@ -5,7 +5,7 @@ import {
   ING_RULES,
   JAPANESE_RULES,
   NO_RULES,
-  Position,
+  BoardPosition,
   sgfRulesMap,
 } from '../src/game';
 import { Color } from '../src/types';
@@ -22,7 +22,7 @@ describe('Game object', () => {
       strictEqual(game.rules.komi, 6.5);
       strictEqual(game.blackCaptures, 0);
       strictEqual(game.whiteCaptures, 0);
-      deepEqual(game.position, new Position());
+      deepEqual(game.position, new BoardPosition());
     });
 
     it('Custom board size and rules', () => {
@@ -34,14 +34,14 @@ describe('Game object', () => {
       strictEqual(game.rules.komi, 7.5);
       strictEqual(game.blackCaptures, 0);
       strictEqual(game.whiteCaptures, 0);
-      deepEqual(game.position, new Position(9));
+      deepEqual(game.position, new BoardPosition(9));
     });
 
     it('Rectangular board size', () => {
       const game = new Game({ cols: 13, rows: 17 });
       strictEqual(game.position.cols, 13);
       strictEqual(game.position.rows, 17);
-      deepEqual(game.position, new Position(13, 17));
+      deepEqual(game.position, new BoardPosition(13, 17));
     });
   });
 

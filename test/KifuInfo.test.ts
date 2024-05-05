@@ -512,15 +512,29 @@ describe('KifuInfo', () => {
     });
   });
 
+  describe('Unknown properties.', () => {
+    it('Properties which are handled by KifuNode are ignored', () => {
+      const node = KifuInfo.fromSGF('B[cd]C[comment]');
+      deepEqual(node.properties, {});
+    });
+
+    it('Custom properties are stored as they are', () => {
+      const node = KifuInfo.fromSGF('FOO[foo]BAR[bar][baz]');
+      deepEqual(node.properties, { FOO: ['foo'], BAR: ['bar', 'baz'] });
+    });
+  });
+
   describe('Configuring of Kifu info', () => {
     it('Adding custom properties', () => {
       KifuInfo.defineProperties({
         FF: {
-          get(info: any) {
+          get() {
+            const info = this as any;
             return info.sgfVersion ? [String(info.sgfVersion)] : undefined;
           },
-          set(info: any, [value]) {
+          set([value]) {
             if (value) {
+              const info = this as any;
               info.sgfVersion = value;
             }
           },

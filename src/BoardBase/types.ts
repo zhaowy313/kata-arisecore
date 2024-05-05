@@ -1,11 +1,10 @@
-import { EventEmitter } from '../utils/EventEmitter';
 import BoardObject from './BoardObject';
 import { Point } from '../types';
 
 /**
- * Represent graphical board renderer.
+ * Represents generic go board renderer. It can be implemented as SVG, canvas, but also as plain text on BE.
  */
-export interface Board extends EventEmitter {
+export interface Board {
   resize(): void;
   setWidth(width: number): void;
   setHeight(height: number): void;

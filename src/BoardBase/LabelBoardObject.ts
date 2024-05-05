@@ -3,6 +3,8 @@ import MarkupBoardObject from './MarkupBoardObject';
 
 /**
  * Board label object is special type of markup object, which renders text on the field.
+ *
+ * TODO: type (LB) will be configurable to allow different types of labels.
  */
 export default class LabelBoardObject extends MarkupBoardObject {
   text: string;

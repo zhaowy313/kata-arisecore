@@ -1,11 +1,11 @@
 import { strict as assert, deepStrictEqual, notStrictEqual, strictEqual, throws } from 'assert';
-import { Position } from '../src/game';
+import { BoardPosition } from '../src/game';
 import { Color } from '../src/types';
 
-describe('Position object', () => {
+describe('BoardPosition object', () => {
   describe('New position', () => {
     it('Creates default empty position (19x19)', () => {
-      const position = new Position();
+      const position = new BoardPosition();
 
       strictEqual(position.cols, 19);
       strictEqual(position.rows, 19);
@@ -20,7 +20,7 @@ describe('Position object', () => {
     });
 
     it('Creates custom square position', () => {
-      const position = new Position(9);
+      const position = new BoardPosition(9);
 
       strictEqual(position.cols, 9);
       strictEqual(position.rows, 9);
@@ -31,7 +31,7 @@ describe('Position object', () => {
     });
 
     it('Creates custom rectangular position', () => {
-      const position = new Position(9, 19);
+      const position = new BoardPosition(9, 19);
 
       strictEqual(position.cols, 9);
       strictEqual(position.rows, 19);
@@ -42,9 +42,9 @@ describe('Position object', () => {
     });
   });
 
-  describe('Position#get() & Position#set()', () => {
+  describe('BoardPosition#get() & BoardPosition#set()', () => {
     it('Basic getting and setting fields/stones', () => {
-      const position = new Position(9);
+      const position = new BoardPosition(9);
 
       strictEqual(position.get(0, 0), Color.Empty);
       strictEqual(position.get(0, 1), Color.Empty);
@@ -73,7 +73,7 @@ describe('Position object', () => {
     });
 
     it('Returns undefined/null when accessing field outside of the position.', () => {
-      const position = new Position(9);
+      const position = new BoardPosition(9);
 
       assert(position.get(0, -1) == null);
       assert(position.get(-1, 0) == null);
@@ -82,7 +82,7 @@ describe('Position object', () => {
     });
 
     it('Throws error, when setting field outside of the position.', () => {
-      const position = new Position(9);
+      const position = new BoardPosition(9);
 
       throws(() => {
         position.set(0, -1, Color.White);
@@ -99,16 +99,16 @@ describe('Position object', () => {
     });
   });
 
-  describe('Position#clone()', () => {
+  describe('BoardPosition#clone()', () => {
     it('Clones empty position', () => {
-      const position = new Position(9);
+      const position = new BoardPosition(9);
       const cloned = position.clone();
       notStrictEqual(position, cloned);
       deepStrictEqual(position, cloned);
     });
 
     it('Clones position with all moves', () => {
-      const position = new Position(3);
+      const position = new BoardPosition(3);
 
       position.set(0, 0, Color.Black);
       position.set(0, 1, Color.White);
@@ -127,15 +127,15 @@ describe('Position object', () => {
     });
   });
 
-  describe('Position#compare()', () => {
+  describe('BoardPosition#compare()', () => {
     it('Cloned positions are the same', () => {
-      const position = new Position(19);
+      const position = new BoardPosition(19);
       position.set(10, 10, Color.Black);
       assert(position.equals(position.clone()));
     });
 
     it('Different positions are not the same', () => {
-      const position = new Position(3);
+      const position = new BoardPosition(3);
       position.set(0, 0, Color.Black);
 
       const cloned = position.clone();
@@ -145,16 +145,16 @@ describe('Position object', () => {
     });
 
     it('Different sizes are not the same', () => {
-      const position = new Position(19);
-      const position2 = new Position(13);
+      const position = new BoardPosition(19);
+      const position2 = new BoardPosition(13);
 
       assert(!position.equals(position2));
     });
   });
 
-  describe('Position#hasLiberties()', () => {
+  describe('BoardPosition#hasLiberties()', () => {
     it('One lonely stone has liberties', () => {
-      const position = new Position(9);
+      const position = new BoardPosition(9);
       position.set(0, 0, Color.Black);
       position.set(0, 8, Color.White);
       position.set(8, 0, Color.Black);
@@ -169,7 +169,7 @@ describe('Position object', () => {
     });
 
     it("Surrounded stone doesn't have liberties", () => {
-      const position = new Position(9);
+      const position = new BoardPosition(9);
       position.set(0, 0, Color.Black);
       position.set(1, 0, Color.White);
       position.set(0, 1, Color.White);
@@ -200,7 +200,7 @@ describe('Position object', () => {
     });
 
     it('Group of stones with liberty', () => {
-      const position = new Position(9, 13);
+      const position = new BoardPosition(9, 13);
       position.set(0, 0, Color.Black);
       position.set(0, 1, Color.Black);
       position.set(0, 2, Color.Black);
@@ -218,7 +218,7 @@ describe('Position object', () => {
     });
 
     it('Group of stones without liberty', () => {
-      const position = new Position(9);
+      const position = new BoardPosition(9);
       position.set(0, 0, Color.Black);
       position.set(0, 1, Color.Black);
       position.set(0, 2, Color.Black);
@@ -237,9 +237,9 @@ describe('Position object', () => {
     });
   });
 
-  describe('Position#removeChain()', () => {
+  describe('BoardPosition#removeChain()', () => {
     it('Test removing of all stones', () => {
-      const position = new Position(3);
+      const position = new BoardPosition(3);
 
       position.set(0, 0, Color.Black);
       position.set(0, 1, Color.Black);
@@ -265,7 +265,7 @@ describe('Position object', () => {
     });
 
     it('Group of stones is correctly captured', () => {
-      const position = new Position(9);
+      const position = new BoardPosition(9);
       position.set(0, 0, Color.Black);
       position.set(0, 1, Color.Black);
       position.set(0, 2, Color.Black);

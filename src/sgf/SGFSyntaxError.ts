@@ -1,6 +1,5 @@
 /**
  * Class for syntax errors in SGF string.
- * @ extends Error
  */
 export class SGFSyntaxError extends Error {
   // tslint:disable-next-line:variable-name
@@ -21,7 +20,3 @@ export class SGFSyntaxError extends Error {
     }
   }
 }
-
-// a small ES5 hack because currently in ES6 you can't extend Errors
-// SGFSyntaxError.prototype = Object.create(Error.prototype);
-// SGFSyntaxError.prototype.constructor = SGFSyntaxError;

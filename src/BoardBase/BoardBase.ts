@@ -4,37 +4,44 @@ import { Board, BoardBaseConfig, BoardViewport } from './types';
 import { BoardObject } from '.';
 import FieldBoardObject from './FieldBoardObject';
 import { defaultBoardBaseConfig } from './defaultConfig';
+import { Point } from '../types';
 
 /**
- * Board class with basic functionality which can be used for creating custom boards.
+ * Board class with basic functionality which can be used for creating boards for web.
+ *
+ * TODO: rename.
  */
-export default class BoardBase extends EventEmitter implements Board {
+export abstract class BoardBase extends EventEmitter implements Board {
   readonly config: BoardBaseConfig;
   readonly element: HTMLElement;
 
   protected objects: BoardObject[] = [];
+
+  // Offsets (TODO: rename and check)
+  left: number;
+  right: number;
+  bottom: number;
+  top: number;
+  touchArea: HTMLElement;
 
   constructor(element: HTMLElement, config: PartialRecursive<BoardBaseConfig> = {}) {
     super();
 
     // merge user config with default
     this.element = element;
+    this.touchArea = element;
     this.config = makeConfig(defaultBoardBaseConfig, config);
   }
 
   /**
    * Updates dimensions and redraws everything
    */
-  resize() {
-    // subclass may do resize things here
-  }
+  abstract resize(): void;
 
   /**
    * Redraw everything.
    */
-  redraw() {
-    // subclass should implement this
-  }
+  abstract redraw(): void;
 
   /**
    * Add board object. Main function for adding graphics on the board.
@@ -61,7 +68,7 @@ export default class BoardBase extends EventEmitter implements Board {
    *
    * @param boardObject
    */
-  updateObject(boardObject: BoardObject | BoardObject[]) {}
+  abstract updateObject(boardObject: BoardObject | BoardObject[]): void;
 
   /**
    * Remove board object. Main function for removing graphics on the board.
@@ -196,5 +203,43 @@ export default class BoardBase extends EventEmitter implements Board {
    */
   setCoordinates(coordinates: boolean) {
     this.config.coordinates = coordinates;
+  }
+
+  on<T extends string>(
+    type: T,
+    callback: (evt: { target: any; type: T; point: Point | null }) => void,
+  ) {
+    super.on(type, callback);
+    this.registerBoardListener(type);
+
+    return this;
+  }
+
+  registerBoardListener(type: string) {
+    this.touchArea.addEventListener(type, (evt) => {
+      if ((evt as any).layerX != null) {
+        const pos = this.getRelativeCoordinates((evt as any).layerX, (evt as any).layerY);
+        this.emit(type, { ...evt, point: pos });
+      } else {
+        this.emit(type, evt);
+      }
+    });
+  }
+
+  getRelativeCoordinates(absoluteX: number, absoluteY: number) {
+    // new hopefully better translation of coordinates
+
+    const fieldWidth = this.touchArea.offsetWidth / this.right;
+    const fieldHeight = this.touchArea.offsetHeight / this.bottom;
+
+    const x = Math.round(absoluteX / fieldWidth + this.left);
+    const y = Math.round(absoluteY / fieldHeight + this.top);
+    const size = this.getSize();
+
+    if (x < 0 || x >= size.x || y < 0 || y >= size.y) {
+      return null;
+    }
+
+    return { x, y };
   }
 }

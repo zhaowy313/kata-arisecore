@@ -1,356 +1,356 @@
-import { SGFPropertyDescriptors } from '../sgf';
+import { SGFPropertyDescriptorMap } from '../sgf';
 import { KifuInfo } from './KifuInfo';
 
-export const kifuInfoSGFPropertyDescriptors: SGFPropertyDescriptors<KifuInfo> = {
+export const kifuInfoSGFPropertyDescriptors: SGFPropertyDescriptorMap<KifuInfo> = {
   SZ: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.boardSize = undefined;
+        this.boardSize = undefined;
         return;
       }
       const sizes = value.split(':');
-      info.boardSize = sizes[1]
+      this.boardSize = sizes[1]
         ? { cols: parseInt(sizes[0]), rows: parseInt(sizes[1]) }
         : Number(sizes[0]);
     },
-    get(info) {
-      if (info.boardSize) {
-        if (typeof info.boardSize === 'number') {
-          return [String(info.boardSize)];
+    get() {
+      if (this.boardSize) {
+        if (typeof this.boardSize === 'number') {
+          return [String(this.boardSize)];
         } else {
-          return [`${info.boardSize.cols}:${info.boardSize.rows}`];
+          return [`${this.boardSize.cols}:${this.boardSize.rows}`];
         }
       }
     },
   },
   HA: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.handicap = undefined;
+        this.handicap = undefined;
         return;
       }
-      info.handicap = parseInt(value);
+      this.handicap = parseInt(value);
     },
-    get(info) {
-      if (info.handicap) {
-        return [String(info.handicap)];
+    get() {
+      if (this.handicap) {
+        return [String(this.handicap)];
       }
     },
   },
   KM: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.komi = undefined;
+        this.komi = undefined;
         return;
       }
-      info.komi = parseFloat(value);
+      this.komi = parseFloat(value);
     },
-    get(info) {
-      if (info.komi) {
-        return [String(info.komi)];
+    get() {
+      if (this.komi) {
+        return [String(this.komi)];
       }
     },
   },
   ST: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.variationsStyle = undefined;
+        this.variationsStyle = undefined;
         return;
       }
       const val = parseInt(value);
 
-      info.variationsStyle = {
+      this.variationsStyle = {
         currentNode: !!(val & 1),
         noMarkup: !!(val & 2),
       };
     },
-    get(info) {
-      if (info.variationsStyle) {
+    get() {
+      if (this.variationsStyle) {
         return [
           String(
-            Number(info.variationsStyle.currentNode) + Number(info.variationsStyle.noMarkup) * 2,
+            Number(this.variationsStyle.currentNode) + Number(this.variationsStyle.noMarkup) * 2,
           ),
         ];
       }
     },
   },
   PB: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.blackName = undefined;
+        this.blackName = undefined;
         return;
       }
-      info.blackName = value;
+      this.blackName = value;
     },
-    get(info) {
-      if (info.blackName) {
-        return [info.blackName];
+    get() {
+      if (this.blackName) {
+        return [this.blackName];
       }
     },
   },
   BR: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.blackRank = undefined;
+        this.blackRank = undefined;
         return;
       }
-      info.blackRank = value;
+      this.blackRank = value;
     },
-    get(info) {
-      if (info.blackRank) {
-        return [info.blackRank];
+    get() {
+      if (this.blackRank) {
+        return [this.blackRank];
       }
     },
   },
   BT: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.blackTeam = undefined;
+        this.blackTeam = undefined;
         return;
       }
-      info.blackTeam = value;
+      this.blackTeam = value;
     },
-    get(info) {
-      if (info.blackTeam) {
-        return [info.blackTeam];
+    get() {
+      if (this.blackTeam) {
+        return [this.blackTeam];
       }
     },
   },
   PW: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.whiteName = undefined;
+        this.whiteName = undefined;
         return;
       }
-      info.whiteName = value;
+      this.whiteName = value;
     },
-    get(info) {
-      if (info.whiteName) {
-        return [info.whiteName];
+    get() {
+      if (this.whiteName) {
+        return [this.whiteName];
       }
     },
   },
   WR: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.whiteRank = undefined;
+        this.whiteRank = undefined;
         return;
       }
-      info.whiteRank = value;
+      this.whiteRank = value;
     },
-    get(info) {
-      if (info.whiteRank) {
-        return [info.whiteRank];
+    get() {
+      if (this.whiteRank) {
+        return [this.whiteRank];
       }
     },
   },
   WT: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.whiteTeam = undefined;
+        this.whiteTeam = undefined;
         return;
       }
-      info.whiteTeam = value;
+      this.whiteTeam = value;
     },
-    get(info) {
-      if (info.whiteTeam) {
-        return [info.whiteTeam];
+    get() {
+      if (this.whiteTeam) {
+        return [this.whiteTeam];
       }
     },
   },
   GN: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.gameName = undefined;
+        this.gameName = undefined;
         return;
       }
-      info.gameName = value;
+      this.gameName = value;
     },
-    get(info) {
-      if (info.gameName) {
-        return [info.gameName];
+    get() {
+      if (this.gameName) {
+        return [this.gameName];
       }
     },
   },
   GC: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.gameComment = undefined;
+        this.gameComment = undefined;
         return;
       }
-      info.gameComment = value;
+      this.gameComment = value;
     },
-    get(info) {
-      if (info.gameComment) {
-        return [info.gameComment];
+    get() {
+      if (this.gameComment) {
+        return [this.gameComment];
       }
     },
   },
   DT: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.date = undefined;
+        this.date = undefined;
         return;
       }
-      info.date = value;
+      this.date = value;
     },
-    get(info) {
-      if (info.date) {
-        return [info.date];
+    get() {
+      if (this.date) {
+        return [this.date];
       }
     },
   },
   EV: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.event = undefined;
+        this.event = undefined;
         return;
       }
-      info.event = value;
+      this.event = value;
     },
-    get(info) {
-      if (info.event) {
-        return [info.event];
+    get() {
+      if (this.event) {
+        return [this.event];
       }
     },
   },
   PC: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.place = undefined;
+        this.place = undefined;
         return;
       }
-      info.place = value;
+      this.place = value;
     },
-    get(info) {
-      if (info.place) {
-        return [info.place];
+    get() {
+      if (this.place) {
+        return [this.place];
       }
     },
   },
   RO: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.round = undefined;
+        this.round = undefined;
         return;
       }
-      info.round = value;
+      this.round = value;
     },
-    get(info) {
-      if (info.round) {
-        return [info.round];
+    get() {
+      if (this.round) {
+        return [this.round];
       }
     },
   },
   RE: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.result = undefined;
+        this.result = undefined;
         return;
       }
-      info.result = value as any;
+      this.result = value as any;
     },
-    get(info) {
-      if (info.result) {
-        return [info.result];
+    get() {
+      if (this.result) {
+        return [this.result];
       }
     },
   },
   TM: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.timeLimits = undefined;
+        this.timeLimits = undefined;
         return;
       }
-      info.timeLimits = parseInt(value);
+      this.timeLimits = parseInt(value);
     },
-    get(info) {
-      if (info.timeLimits) {
-        return [String(info.timeLimits)];
+    get() {
+      if (this.timeLimits) {
+        return [String(this.timeLimits)];
       }
     },
   },
   OT: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.overTime = undefined;
+        this.overTime = undefined;
         return;
       }
-      info.overTime = value;
+      this.overTime = value;
     },
-    get(info) {
-      if (info.overTime) {
-        return [info.overTime];
+    get() {
+      if (this.overTime) {
+        return [this.overTime];
       }
     },
   },
   RU: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.rules = undefined;
+        this.rules = undefined;
         return;
       }
-      info.rules = value;
+      this.rules = value;
     },
-    get(info) {
-      if (info.rules) {
-        return [info.rules];
+    get() {
+      if (this.rules) {
+        return [this.rules];
       }
     },
   },
   SO: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.source = undefined;
+        this.source = undefined;
         return;
       }
-      info.source = value;
+      this.source = value;
     },
-    get(info) {
-      if (info.source) {
-        return [info.source];
+    get() {
+      if (this.source) {
+        return [this.source];
       }
     },
   },
   US: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.author = undefined;
+        this.author = undefined;
         return;
       }
-      info.author = value;
+      this.author = value;
     },
-    get(info) {
-      if (info.author) {
-        return [info.author];
+    get() {
+      if (this.author) {
+        return [this.author];
       }
     },
   },
   AN: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.annotator = undefined;
+        this.annotator = undefined;
         return;
       }
-      info.annotator = value;
+      this.annotator = value;
     },
-    get(info) {
-      if (info.annotator) {
-        return [info.annotator];
+    get() {
+      if (this.annotator) {
+        return [this.annotator];
       }
     },
   },
   CP: {
-    set(info, [value]) {
+    set([value]) {
       if (!value) {
-        info.copyright = undefined;
+        this.copyright = undefined;
         return;
       }
-      info.copyright = value;
+      this.copyright = value;
     },
-    get(info) {
-      if (info.copyright) {
-        return [info.copyright];
+    get() {
+      if (this.copyright) {
+        return [this.copyright];
       }
     },
   },

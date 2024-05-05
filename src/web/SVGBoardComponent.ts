@@ -1,10 +1,16 @@
-import { BoardObject, FieldBoardObject } from '../BoardBase';
+import {
+  BoardObject,
+  FieldBoardObject,
+  LabelBoardObject,
+  LineBoardObject,
+  MarkupBoardObject,
+} from '../BoardBase';
 import { SVGBoard, SVGBoardObject, SVGDrawHandler, SVGRenderer } from '../SVGBoard';
 import SVGCustomFieldBoardObject from '../SVGBoard/SVGCustomFieldBoardObject';
 import SVGCustomLabelBoardObject from '../SVGBoard/SVGCustomLabelBoardObject';
-import { Editor } from '../editor';
+import { Editor, EditorEvent } from '../editor';
 import { KifuNode } from '../kifu';
-import { Color, Point } from '../types';
+import { Color, Point, Vector } from '../types';
 
 enum VariationMarkupStyle {
   None = 'NONE',
@@ -68,22 +74,25 @@ export class SVGBoardComponent {
 
   #handleNodeChange = () => {
     this.#variations = this.editor.getVariations();
+
     this.#removeAllNodeBoardObjects();
     this.#highlightCurrentMove();
     this.#addVariationMarkup();
+    this.#applyMarkup();
   };
 
   #handleGameStateChange = () => {
     this.#updateStones();
   };
 
-  #handleBoardClick = ({ point }) => {
+  #handleBoardClick = ({ point }: { point?: Point }) => {
     //this.player.emit('board.click', point);
-
-    this.#selectVariation(point);
+    if (point) {
+      this.#selectVariation(point);
+    }
   };
 
-  #handleBoardMouseMove = ({ point }) => {
+  #handleBoardMouseMove = ({ point }: { point?: Point }) => {
     if (!point) {
       this.mousePosition = null;
       // this.player.emit('board.mouseOut');
@@ -110,6 +119,10 @@ export class SVGBoardComponent {
       // this.player.emit('board.mouseOut');
       this.#removeVariationCursor();
     }
+  };
+
+  #handleViewportChange = (evt: EditorEvent<'viewportChange'>) => {
+    this.#updateViewport(evt.boardSection);
   };
 
   constructor(editor: Editor, config: SVGBoardComponentConfig = defaultSVGBoardComponentConfig) {
@@ -153,6 +166,7 @@ export class SVGBoardComponent {
     this.editor.on('gameLoad', this.#handleGameLoad);
     this.editor.on('nodeChange', this.#handleNodeChange);
     this.editor.on('gameStateChange', this.#handleGameStateChange);
+    this.editor.on('viewportChange', this.#handleViewportChange);
   }
 
   #updateStones() {
@@ -228,6 +242,75 @@ export class SVGBoardComponent {
     );
     boardMarkup.zIndex = 10;
     this.addNodeBoardObject(boardMarkup);
+  }
+
+  #applyMarkup() {
+    this.editor.currentNode.markup.forEach((markup) => {
+      let boardMarkup: BoardObject;
+
+      if ('text' in markup) {
+        // label markup
+        boardMarkup = new LabelBoardObject(
+          markup.text,
+          markup.x,
+          markup.y,
+          this.editor.gameState.position.get(markup.x, markup.y),
+        );
+      } else if ('x' in markup) {
+        boardMarkup = new MarkupBoardObject(
+          markup.type,
+          markup.x,
+          markup.y,
+          this.editor.gameState.position.get(markup.x, markup.y),
+        );
+      } else {
+        boardMarkup = new LineBoardObject(
+          markup.type,
+          { x: markup.x1, y: markup.y1 },
+          { x: markup.x2, y: markup.y2 },
+        );
+      }
+
+      boardMarkup.zIndex = 10;
+      this.addNodeBoardObject(boardMarkup);
+    });
+
+    // Not sure if this is optimal for dimming, probably not the most performant solution
+    this.editor.gameState.properties.dim?.forEach((dim) => {
+      const boardMarkup = new LineBoardObject(
+        'DD',
+        { x: dim.x1, y: dim.y1 },
+        { x: dim.x2, y: dim.y2 },
+      );
+
+      boardMarkup.zIndex = 10;
+      this.addNodeBoardObject(boardMarkup);
+    });
+  }
+
+  #updateViewport(boardSection: Vector | null) {
+    if (boardSection) {
+      const minX = Math.min(boardSection.x1, boardSection.x2);
+      const minY = Math.min(boardSection.y1, boardSection.y2);
+      const maxX = Math.max(boardSection.x1, boardSection.x2);
+      const maxY = Math.max(boardSection.y1, boardSection.y2);
+      const size = this.board.getSize();
+
+      this.board.setViewport({
+        left: minX,
+        top: minY,
+        right: size.x - maxX - 1,
+        bottom: size.y - maxY - 1,
+      });
+    } else {
+      // Reset viewport
+      this.board.setViewport({
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      });
+    }
   }
 
   #getVariationMarkupStyle() {

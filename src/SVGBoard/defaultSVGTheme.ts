@@ -6,7 +6,7 @@ import ModernStoneBlack from './svgDrawHandlers/ModernStoneBlack';
 
 const defaultSVGTheme: SVGBoardTheme = {
   ...defaultBoardBaseTheme,
-  // backgroundImage: 'images/wood1.jpg',
+  //backgroundImage: 'images/wood1.jpg',
   markupGridMask: 0.8,
   stoneSize: 0.48,
 
@@ -39,25 +39,31 @@ const defaultSVGTheme: SVGBoardTheme = {
     // W: new drawHandlers.GlassStoneWhite(),
     W: new ModernStoneWhite(),
     B: new ModernStoneBlack(),
-    /*B: new drawHandlers.RealisticStone([
-      'images/stones/black00_128.png',
-      'images/stones/black01_128.png',
-      'images/stones/black02_128.png',
-      'images/stones/black03_128.png',
-    ], new drawHandlers.GlassStoneBlack()),
-    W: new drawHandlers.RealisticStone([
-      'images/stones/white00_128.png',
-      'images/stones/white01_128.png',
-      'images/stones/white02_128.png',
-      'images/stones/white03_128.png',
-      'images/stones/white04_128.png',
-      'images/stones/white05_128.png',
-      'images/stones/white06_128.png',
-      'images/stones/white07_128.png',
-      'images/stones/white08_128.png',
-      'images/stones/white09_128.png',
-      'images/stones/white10_128.png',
-    ], new drawHandlers.GlassStoneWhite()),*/
+    //B: new drawHandlers.RealisticStone(
+    //  [
+    //    'images/black00_128.png',
+    //    'images/black01_128.png',
+    //    'images/black02_128.png',
+    //    'images/black03_128.png',
+    //  ],
+    //  new drawHandlers.GlassStoneBlack(),
+    //),
+    //W: new drawHandlers.RealisticStone(
+    //  [
+    //    'images/white00_128.png',
+    //    'images/white01_128.png',
+    //    'images/white02_128.png',
+    //    'images/white03_128.png',
+    //    'images/white04_128.png',
+    //    'images/white05_128.png',
+    //    'images/white06_128.png',
+    //    'images/white07_128.png',
+    //    'images/white08_128.png',
+    //    'images/white09_128.png',
+    //    'images/white10_128.png',
+    //  ],
+    //  new drawHandlers.GlassStoneWhite(),
+    //),
   },
 };
 

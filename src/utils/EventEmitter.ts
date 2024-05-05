@@ -1,9 +1,9 @@
 /**
  * Simple event interface.
  */
-interface Event<T> {
+interface EventBase<T, K extends string | symbol | number> {
   target: T;
-  type: string;
+  type: K;
 }
 
 /**
@@ -15,8 +15,11 @@ interface Event<T> {
 export class EventEmitter<T = any> {
   #events: { [eventName: string | symbol]: Array<(event: any) => void> } = {};
 
-  on<E extends keyof T>(event: E, listener: (event: Event<this> & T[E]) => void): this;
-  on(event: string, listener: (event: Event<this> & { [key: string]: any }) => void): this;
+  on<E extends keyof T>(event: E, listener: (event: EventBase<this, E> & T[E]) => void): this;
+  on(
+    event: string,
+    listener: (event: EventBase<this, string> & { [key: string]: any }) => void,
+  ): this;
   on(event: string, listener: (event: any) => void) {
     this.#events[event] = this.#events[event] || [];
     this.#events[event].push(listener);
@@ -24,8 +27,11 @@ export class EventEmitter<T = any> {
     return this;
   }
 
-  off<E extends keyof T>(event: E, listener: (event: Event<this> & T[E]) => void): this;
-  off(event: string, listener: (event: Event<this> & { [key: string]: any }) => void): this;
+  off<E extends keyof T>(event: E, listener: (event: EventBase<this, E> & T[E]) => void): this;
+  off(
+    event: string,
+    listener: (event: EventBase<this, string> & { [key: string]: any }) => void,
+  ): this;
   off(event: string, listener: (event: any) => void) {
     if (this.#events[event]) {
       this.#events[event] = this.#events[event].filter((fn) => fn !== listener);
@@ -49,3 +55,5 @@ export class EventEmitter<T = any> {
     return false;
   }
 }
+
+export type Event<T, K extends keyof T, O> = EventBase<O, K> & T[K];

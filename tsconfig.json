@@ -11,10 +11,12 @@
     "sourceMap": true,
     "declaration": true,
     "strict": true,
-    "strictNullChecks": false,
+    "strictNullChecks": true,
     "downlevelIteration": true,
     "resolveJsonModule": true,
+    "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "isolatedModules": true
   }
 }

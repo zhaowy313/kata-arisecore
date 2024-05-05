@@ -1,113 +1,148 @@
-import { SGFPropertiesBag, SGFPropertyDescriptors } from '../sgf';
+import { SGFPropertiesBag, SGFPropertyDescriptorMap } from '../sgf';
 import { Color } from '../types';
 import { KifuNode, MarkupType } from './KifuNode';
 
-export const kifuNodeSGFPropertyDescriptors: SGFPropertyDescriptors<KifuNode> = {
+export const kifuNodeSGFPropertyDescriptors: SGFPropertyDescriptorMap<KifuNode> = {
   B: KifuNode.createMoveDescriptor(Color.Black),
   W: KifuNode.createMoveDescriptor(Color.White),
   AB: KifuNode.createSetupDescriptor(Color.Black),
   AW: KifuNode.createSetupDescriptor(Color.White),
   AE: KifuNode.createSetupDescriptor(Color.Empty),
   PL: {
-    set(node, [value]) {
+    set([value]) {
       if (!value) {
-        node.player = undefined;
+        this.player = undefined;
         return;
       }
-      node.player = value.toUpperCase() === 'W' ? Color.White : Color.Black;
+      this.player = value.toUpperCase() === 'W' ? Color.White : Color.Black;
     },
-    get(node) {
-      if (node.player) {
-        return [node.player === Color.White ? 'W' : 'B'];
+    get() {
+      if (this.player) {
+        return [this.player === Color.White ? 'W' : 'B'];
       }
     },
   },
   VW: {
-    set(node, [value]) {
-      if (!value) {
-        node.boardSection = undefined;
-        return;
+    set([value]) {
+      if (value) {
+        this.boardSection = SGFPropertiesBag.parseVector(value);
+      } else if (value === '') {
+        this.boardSection = null;
+      } else {
+        this.boardSection = undefined;
       }
-      node.boardSection = SGFPropertiesBag.parseVector(value);
     },
-    get(node) {
-      if (node.boardSection) {
-        return [SGFPropertiesBag.vectorToSGFValue(node.boardSection)];
+    get() {
+      if (this.boardSection) {
+        return [SGFPropertiesBag.vectorToSGFValue(this.boardSection)];
+      } else if (this.boardSection === null) {
+        return [''];
+      }
+    },
+  },
+  DD: {
+    set(values: string[]) {
+      if (!values.length) {
+        this.dim = undefined;
+      } else if (values[0] === '') {
+        this.dim = [];
+      } else {
+        this.dim = values.map((value) => {
+          if (value.length === 5) {
+            return SGFPropertiesBag.parseVector(value);
+          } else {
+            const point = SGFPropertiesBag.parsePoint(value);
+            return { x1: point.x, y1: point.y, x2: point.x, y2: point.y };
+          }
+        });
+      }
+    },
+    get() {
+      if (this.dim) {
+        if (!this.dim.length) {
+          return [''];
+        }
+        return this.dim.map((value) => {
+          if (value.x1 === value.x2 && value.y1 === value.y2) {
+            return SGFPropertiesBag.vectorToSGFValue(value).substring(0, 2);
+          } else {
+            return SGFPropertiesBag.vectorToSGFValue(value);
+          }
+        });
       }
     },
   },
   BL: {
-    set(node, [value]) {
+    set([value]) {
       if (!value) {
-        node.blackTimeLeft = undefined;
+        this.blackTimeLeft = undefined;
         return;
       }
-      node.blackTimeLeft = parseFloat(value);
+      this.blackTimeLeft = parseFloat(value);
     },
-    get(node) {
-      if (node.blackTimeLeft) {
-        return [String(node.blackTimeLeft)];
+    get() {
+      if (this.blackTimeLeft) {
+        return [String(this.blackTimeLeft)];
       }
     },
   },
   OB: {
-    set(node, [value]) {
+    set([value]) {
       if (!value) {
-        node.blackStonesLeft = undefined;
+        this.blackStonesLeft = undefined;
         return;
       }
-      node.blackStonesLeft = parseInt(value, 10);
+      this.blackStonesLeft = parseInt(value, 10);
     },
-    get(node) {
-      if (node.blackStonesLeft) {
-        return [String(node.blackStonesLeft)];
+    get() {
+      if (this.blackStonesLeft) {
+        return [String(this.blackStonesLeft)];
       }
     },
   },
   WL: {
-    set(node, [value]) {
+    set([value]) {
       if (!value) {
-        node.whiteTimeLeft = undefined;
+        this.whiteTimeLeft = undefined;
         return;
       }
-      node.whiteTimeLeft = parseFloat(value);
+      this.whiteTimeLeft = parseFloat(value);
     },
-    get(node) {
-      if (node.whiteTimeLeft) {
-        return [String(node.whiteTimeLeft)];
+    get() {
+      if (this.whiteTimeLeft) {
+        return [String(this.whiteTimeLeft)];
       }
     },
   },
   OW: {
-    set(node, [value]) {
+    set([value]) {
       if (!value) {
-        node.whiteStonesLeft = undefined;
+        this.whiteStonesLeft = undefined;
         return;
       }
-      node.whiteStonesLeft = parseInt(value, 10);
+      this.whiteStonesLeft = parseInt(value, 10);
     },
-    get(node) {
-      if (node.whiteStonesLeft) {
-        return [String(node.whiteStonesLeft)];
+    get() {
+      if (this.whiteStonesLeft) {
+        return [String(this.whiteStonesLeft)];
       }
     },
   },
   C: {
-    set(node, [value]) {
+    set([value]) {
       if (!value) {
-        node.comment = undefined;
+        this.comment = undefined;
         return;
       }
-      node.comment = value;
+      this.comment = value;
     },
-    get(node) {
-      if (node.comment) {
-        return [node.comment];
+    get() {
+      if (this.comment) {
+        return [this.comment];
       }
     },
   },
   CR: KifuNode.createPointMarkupDescriptor(MarkupType.Circle),
-  DD: KifuNode.createPointMarkupDescriptor(MarkupType.Dim),
   MA: KifuNode.createPointMarkupDescriptor(MarkupType.XMark),
   SL: KifuNode.createPointMarkupDescriptor(MarkupType.Selected),
   SQ: KifuNode.createPointMarkupDescriptor(MarkupType.Square),

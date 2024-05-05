@@ -1,4 +1,9 @@
-import { SGFPropertiesBag, SGFPropertyDescriptors, SGFProperties } from '../sgf';
+import {
+  SGFPropertiesBag,
+  SGFPropertyDescriptorMap,
+  SGFProperties,
+  SGFPropertyDescriptor,
+} from '../sgf';
 import { Color, Field, Move, Point, Vector } from '../types';
 import { kifuInfoSGFPropertyDescriptors } from './kifuInfoSGFPropertyDescriptors';
 import { kifuNodeSGFPropertyDescriptors } from './kifuNodeSGFPropertyDescriptors';
@@ -6,7 +11,6 @@ import { kifuNodeSGFPropertyDescriptors } from './kifuNodeSGFPropertyDescriptors
 export enum MarkupType {
   Arrow = 'AR',
   Circle = 'CR',
-  Dim = 'DD',
   Label = 'LB',
   Line = 'LN',
   XMark = 'MA',
@@ -18,7 +22,6 @@ export enum MarkupType {
 export interface PointMarkup extends Point {
   readonly type:
     | MarkupType.Circle
-    | MarkupType.Dim
     | MarkupType.Selected
     | MarkupType.Square
     | MarkupType.Triangle
@@ -72,23 +75,27 @@ export class KifuNode extends SGFPropertiesBag {
 
   /**
    * Node markup - for example triangles or square marking some stones or empty fields. WGo supports these
-   * SGF markup properties: `AR`, `CR`, `DD`, `LN`, `LB`, `MA`, `SL`, `SQ` and `TR`.
+   * SGF markup properties: `AR`, `CR`, `LN`, `LB`, `MA`, `SL`, `SQ` and `TR`.
    *
    * This shouldn't be mutated directly, you can replace it or use methods `removeMarkup`, `removeMarkupAt` or `addMarkup`.
    */
   markup: ReadonlyArray<Markup> = [];
 
   /**
-   * View only part of the board.
+   * Dimmed area. Corresponds to SGF's DD property. This is technically markup, but it has special behavior - it is inherited,
+   * it isn't removed on next node (move), it must be removed manually with empty dim array (in SGF DD[]). It also should be also
+   * rendered above all other markup and stones. Finally dimmed area is specified in rectangles, not in points.
    *
    * @see https://www.red-bean.com/sgf/properties.html#VW
    */
-  boardSection?: {
-    readonly x1: number;
-    readonly y1: number;
-    readonly x2: number;
-    readonly y2: number;
-  };
+  dim?: ReadonlyArray<Vector>;
+
+  /**
+   * View only part of the board. WGo only supports rectangular viewport specified in SGF as compressed list (eg. `VW[aa:dd]`)
+   *
+   * @see https://www.red-bean.com/sgf/properties.html#VW
+   */
+  boardSection?: Vector | null;
 
   /**
    * Time left for black, after the move was made. Value is given in seconds.
@@ -125,11 +132,24 @@ export class KifuNode extends SGFPropertiesBag {
    */
   comment?: string;
 
-  /**
-   * Additional custom properties. When creating kifu node from SGF, unknown SGF properties or those which are irrelevant for the WGo
-   * will be stored here as `string[]`.
-   */
-  properties: KifuNodeCustomProperties = {};
+  override properties: KifuNodeCustomProperties = {};
+
+  override getPropertyDescriptors() {
+    return kifuNodeSGFPropertyDescriptors;
+  }
+
+  override getPropertyDescriptor(propIdent: string) {
+    if (kifuInfoSGFPropertyDescriptors[propIdent]) {
+      // Ignore properties that are managed by KifuInfo.
+      return;
+    }
+
+    if (kifuNodeSGFPropertyDescriptors[propIdent]) {
+      return kifuNodeSGFPropertyDescriptors[propIdent];
+    }
+
+    return super.getPropertyDescriptor(propIdent);
+  }
 
   /**
    * Adds setup at given point.
@@ -224,113 +244,113 @@ export class KifuNode extends SGFPropertiesBag {
     );
   }
 
-  override getPropertyDescriptors() {
-    return kifuNodeSGFPropertyDescriptors;
-  }
-
-  override setUnknownSGFProperty(propIdent: string, propValues: string[]) {
-    if (!kifuInfoSGFPropertyDescriptors[propIdent]) {
-      this.properties[propIdent] = propValues;
-    }
-  }
-
+  /**
+   * Create KifuNode instance from SGF properties.
+   */
   static fromSGF(sgfProperties: SGFProperties | string) {
     const kifuNode = new KifuNode();
     kifuNode.setSGFProperties(sgfProperties);
     return kifuNode;
   }
 
+  /**
+   * Create KifuNode instance from plain JS object with same structure as KifuNode.
+   */
   static fromJS(node: Partial<KifuNode>) {
     const kifuNode = new KifuNode();
     Object.assign(kifuNode, node);
     return kifuNode;
   }
 
-  static defineProperties(sgfPropertyDescriptors: SGFPropertyDescriptors<KifuNode>) {
+  /**
+   * Define custom handling of SGF properties for KifuNode. If you want to add support for new properties,
+   * you can use this method.
+   */
+  static defineProperties(sgfPropertyDescriptors: SGFPropertyDescriptorMap<KifuNode>) {
     Object.assign(kifuNodeSGFPropertyDescriptors, sgfPropertyDescriptors);
   }
 
-  static createMoveDescriptor(color: Color.Black | Color.White) {
+  static createMoveDescriptor(color: Color.Black | Color.White): SGFPropertyDescriptor<KifuNode> {
     return {
-      set(node: KifuNode, [value]: string[]) {
+      set([value]: string[]) {
         if (value) {
-          node.move = {
+          this.move = {
             ...SGFPropertiesBag.parsePoint(value),
             c: color,
           };
         } else if (value === '') {
-          node.move = { c: color };
+          this.move = { c: color };
         } else {
-          node.move = undefined;
+          this.move = undefined;
         }
       },
-      get(node: KifuNode) {
-        if (node.move && node.move.c === color) {
-          return ['x' in node.move ? SGFPropertiesBag.pointToSGFValue(node.move) : ''];
+      get() {
+        if (this.move && this.move.c === color) {
+          return ['x' in this.move ? SGFPropertiesBag.pointToSGFValue(this.move) : ''];
         }
       },
     };
   }
 
-  static createSetupDescriptor(color: Color) {
+  static createSetupDescriptor(color: Color): SGFPropertyDescriptor<KifuNode> {
     return {
-      set(node: KifuNode, values: string[]) {
-        node.setup = node.setup.filter((s) => s.c !== color);
-        node.addSetup(
+      set(values: string[]) {
+        this.setup = this.setup.filter((s) => s.c !== color);
+        this.addSetup(
           values.map((value) => ({
             c: color,
             ...SGFPropertiesBag.parsePoint(value),
           })),
         );
       },
-      get(node: KifuNode) {
-        const blackStones = node.setup.filter((s) => s.c === color);
+      get() {
+        const blackStones = this.setup.filter((s) => s.c === color);
         return blackStones.map((bs) => SGFPropertiesBag.pointToSGFValue(bs));
       },
     };
   }
 
-  static createPointMarkupDescriptor(type: PointMarkup['type']) {
+  static createPointMarkupDescriptor(type: PointMarkup['type']): SGFPropertyDescriptor<KifuNode> {
     return {
-      set(node: KifuNode, values: string[]) {
-        node.markup = node.markup.filter((m) => m.type !== type);
-        node.addMarkup(
+      set(values: string[]) {
+        this.markup = this.markup.filter((m) => m.type !== type);
+        this.addMarkup(
           values.map((value) => ({
             type,
             ...SGFPropertiesBag.parsePoint(value),
           })),
         );
       },
-      get(node: KifuNode) {
-        const markup = node.markup.filter((m) => m.type === type) as PointMarkup[];
+      get() {
+        const markup = this.markup.filter((m) => m.type === type) as PointMarkup[];
         return markup.map((m) => SGFPropertiesBag.pointToSGFValue(m));
       },
     };
   }
 
-  static createLineMarkupDescriptor(type: LineMarkup['type']) {
+  static createLineMarkupDescriptor(type: LineMarkup['type']): SGFPropertyDescriptor<KifuNode> {
     return {
-      set(node: KifuNode, values: string[]) {
-        node.markup = node.markup.filter((m) => m.type !== type);
-        node.addMarkup(
+      set(values: string[]) {
+        this.markup = this.markup.filter((m) => m.type !== type);
+        this.addMarkup(
           values.map((value) => ({
             type,
             ...SGFPropertiesBag.parseVector(value),
           })),
         );
       },
-      get(node: KifuNode) {
-        const lineMarkup = node.markup.filter((m) => m.type === type) as LineMarkup[];
+      get() {
+        const lineMarkup = this.markup.filter((m) => m.type === type) as LineMarkup[];
         return lineMarkup.map((m) => SGFPropertiesBag.vectorToSGFValue(m));
       },
     };
   }
 
-  static createLabelMarkupDescriptor(type: LabelMarkup['type']) {
+  static createLabelMarkupDescriptor(type: LabelMarkup['type']): SGFPropertyDescriptor<KifuNode> {
     return {
-      set(node: KifuNode, values: string[]) {
-        node.markup = node.markup.filter((m) => m.type !== type);
-        node.addMarkup(
+      set(values: string[]) {
+        this.markup = this.markup.filter((m) => m.type !== type);
+        this.addMarkup(
           values.map((value) => ({
             type,
             text: value.substring(3),
@@ -338,8 +358,8 @@ export class KifuNode extends SGFPropertiesBag {
           })),
         );
       },
-      get(node: KifuNode) {
-        const labelMarkup = node.markup.filter((m) => m.type === type) as LabelMarkup[];
+      get() {
+        const labelMarkup = this.markup.filter((m) => m.type === type) as LabelMarkup[];
         return labelMarkup.map((m) => `${SGFPropertiesBag.pointToSGFValue(m)}:${m.text}`);
       },
     };

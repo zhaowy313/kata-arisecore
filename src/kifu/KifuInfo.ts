@@ -1,4 +1,4 @@
-import { SGFProperties, SGFPropertiesBag, SGFPropertyDescriptors } from '../sgf';
+import { SGFProperties, SGFPropertiesBag, SGFPropertyDescriptorMap } from '../sgf';
 import { BoardSize } from '../types';
 import { kifuInfoSGFPropertyDescriptors } from './kifuInfoSGFPropertyDescriptors';
 import { kifuNodeSGFPropertyDescriptors } from './kifuNodeSGFPropertyDescriptors';
@@ -195,35 +195,44 @@ export class KifuInfo extends SGFPropertiesBag {
    */
   copyright?: string;
 
-  /**
-   * Additional properties. Usually SGF properties which doesn't have relevant meaning for the WGo. For example
-   * charset (CA) or SGF version (FF). Unsupported or custom properties can be stored here too.
-   */
-  properties: KifuInfoCustomProperties = {};
+  override properties: KifuInfoCustomProperties = {};
 
   override getPropertyDescriptors() {
     return kifuInfoSGFPropertyDescriptors;
   }
 
-  override setUnknownSGFProperty(propIdent: string, propValues: string[]) {
-    if (!kifuNodeSGFPropertyDescriptors[propIdent]) {
-      this.properties[propIdent] = propValues;
+  override getPropertyDescriptor(propIdent: string) {
+    if (kifuNodeSGFPropertyDescriptors[propIdent]) {
+      // Ignore properties that are managed by KifuNode.
+      return;
     }
+
+    if (kifuInfoSGFPropertyDescriptors[propIdent]) {
+      return kifuInfoSGFPropertyDescriptors[propIdent];
+    }
+
+    return super.getPropertyDescriptor(propIdent);
   }
 
+  /**
+   * Create KifuInfo instance from SGF properties.
+   */
   static fromSGF(sgfProperties: SGFProperties | string) {
     const kifuInfo = new KifuInfo();
     kifuInfo.setSGFProperties(sgfProperties);
     return kifuInfo;
   }
 
+  /**
+   * Create KifuInfo instance from plain JS object with same structure as KifuInfo.
+   */
   static fromJS(info: Partial<KifuInfo>) {
     const kifuInfo = new KifuInfo();
     Object.assign(kifuInfo, info);
     return kifuInfo;
   }
 
-  static defineProperties(sgfPropertyDescriptors: SGFPropertyDescriptors<KifuInfo>) {
+  static defineProperties(sgfPropertyDescriptors: SGFPropertyDescriptorMap<KifuInfo>) {
     Object.assign(kifuInfoSGFPropertyDescriptors, sgfPropertyDescriptors);
   }
 }

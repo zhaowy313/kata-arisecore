@@ -72,6 +72,9 @@ describe('KifuNode', () => {
       tests++;
       const node = KifuNode.fromSGF('VW[cd:ef]');
       deepEqual(node.boardSection, { x1: 2, y1: 3, x2: 4, y2: 5 });
+
+      const node2 = KifuNode.fromSGF('VW[]');
+      strictEqual(node2.boardSection, null);
     });
 
     it('Property BL', () => {
@@ -116,12 +119,14 @@ describe('KifuNode', () => {
 
     it('Property DD', () => {
       tests++;
-      const node = KifuNode.fromSGF('DD[cd][ef][gh]');
-      deepEqual(node.markup, [
-        { x: 2, y: 3, type: 'DD' },
-        { x: 4, y: 5, type: 'DD' },
-        { x: 6, y: 7, type: 'DD' },
+      const node = KifuNode.fromSGF('DD[cd][ef:gh]');
+      deepEqual(node.dim, [
+        { x1: 2, y1: 3, x2: 2, y2: 3 },
+        { x1: 4, y1: 5, x2: 6, y2: 7 },
       ]);
+
+      const node2 = KifuNode.fromSGF('DD[]');
+      deepEqual(node2.dim, []);
     });
 
     it('Property MA', () => {
@@ -259,7 +264,10 @@ describe('KifuNode', () => {
       tests++;
       const node = KifuNode.fromSGF('VW[cd:ef]');
       node.setSGFProperty(PropIdent.BoardSection, []);
-      strictEqual(node.player, undefined);
+      strictEqual(node.boardSection, undefined);
+
+      node.setSGFProperty(PropIdent.BoardSection, ['']);
+      strictEqual(node.boardSection, null);
     });
 
     it('Property BL', () => {
@@ -308,7 +316,10 @@ describe('KifuNode', () => {
       tests++;
       const node = KifuNode.fromSGF('DD[ab][cd]TR[ef]');
       node.setSGFProperty(PropIdent.Dim, []);
-      deepEqual(node.markup, [{ x: 4, y: 5, type: 'TR' }]);
+      strictEqual(node.dim, undefined);
+
+      node.setSGFProperty(PropIdent.Dim, ['']);
+      deepEqual(node.dim, []);
     });
 
     it('Property MA', () => {
@@ -438,6 +449,9 @@ describe('KifuNode', () => {
       tests++;
       const node = KifuNode.fromJS({ boardSection: { x1: 2, y1: 3, x2: 4, y2: 5 } });
       strictEqual(node.getSGFProperties(), 'VW[cd:ef]');
+
+      const node2 = KifuNode.fromJS({ boardSection: null });
+      strictEqual(node2.getSGFProperties(), 'VW[]');
     });
 
     it('Property BL', () => {
@@ -486,14 +500,19 @@ describe('KifuNode', () => {
     it('Property DD', () => {
       tests++;
       const node = KifuNode.fromJS({
-        markup: [
-          { x: 2, y: 3, type: MarkupType.Dim },
-          { x: 4, y: 5, type: MarkupType.Dim },
-          { x: 6, y: 7, type: MarkupType.Dim },
+        dim: [
+          { x1: 2, y1: 3, x2: 2, y2: 3 },
+          { x1: 4, y1: 5, x2: 6, y2: 7 },
         ],
       });
 
-      strictEqual(node.getSGFProperties(), 'DD[cd][ef][gh]');
+      strictEqual(node.getSGFProperties(), 'DD[cd][ef:gh]');
+
+      const node2 = KifuNode.fromJS({
+        dim: [],
+      });
+
+      strictEqual(node2.getSGFProperties(), 'DD[]');
     });
 
     it('Property MA', () => {
@@ -615,6 +634,18 @@ describe('KifuNode', () => {
     });
   });
 
+  describe('Unknown properties.', () => {
+    it('Properties which are handled by KifuInfo are ignored', () => {
+      const node = KifuNode.fromSGF('SZ[19]HA[9]PB[Black]PW[White]RE[B+R]');
+      deepEqual(node.properties, {});
+    });
+
+    it('Custom properties are stored as they are', () => {
+      const node = KifuNode.fromSGF('FOO[foo]BAR[bar][baz]');
+      deepEqual(node.properties, { FOO: ['foo'], BAR: ['bar', 'baz'] });
+    });
+  });
+
   describe('Methods for setting SGF properties.', () => {
     it('setSGFProperty', () => {
       const node = new KifuNode();
@@ -730,13 +761,13 @@ describe('KifuNode', () => {
       node.addMarkup({ type: MarkupType.Triangle, x: 2, y: 3 });
       node.addMarkup({ type: MarkupType.Label, text: 'X', x: 2, y: 3 });
       node.addMarkup({ type: MarkupType.Arrow, x1: 2, y1: 3, x2: 4, y2: 5 });
-      node.addMarkup({ type: MarkupType.Dim, x: 4, y: 5 });
+      node.addMarkup({ type: MarkupType.Square, x: 4, y: 5 });
 
       node.removeMarkupAt({ x: 2, y: 3 });
 
       deepEqual(node.markup, [
         { type: MarkupType.Arrow, x1: 2, y1: 3, x2: 4, y2: 5 },
-        { type: MarkupType.Dim, x: 4, y: 5 },
+        { type: MarkupType.Square, x: 4, y: 5 },
       ]);
     });
 
@@ -746,7 +777,7 @@ describe('KifuNode', () => {
       node.addMarkup({ type: MarkupType.Circle, x: 2, y: 3 });
       node.addMarkup({ type: MarkupType.Label, text: 'X', x: 2, y: 3 });
       node.addMarkup({ type: MarkupType.Arrow, x1: 2, y1: 3, x2: 4, y2: 5 });
-      node.addMarkup({ type: MarkupType.Dim, x: 4, y: 5 });
+      node.addMarkup({ type: MarkupType.Square, x: 4, y: 5 });
 
       node.removeMarkup({ type: MarkupType.Circle, x: 2, y: 3 });
       node.removeMarkup([
@@ -754,7 +785,7 @@ describe('KifuNode', () => {
         { type: MarkupType.Label, text: 'X', x: 2, y: 3 },
       ]);
 
-      deepEqual(node.markup, [{ type: MarkupType.Dim, x: 4, y: 5 }]);
+      deepEqual(node.markup, [{ type: MarkupType.Square, x: 4, y: 5 }]);
     });
   });
 

@@ -1,7 +1,7 @@
-import { Position, Rules, sgfRulesMap, GameState, GameEvaluator } from '../game';
+import { BoardPosition, Rules, sgfRulesMap, GameState } from '../game';
 import { Kifu, KifuInfo, KifuNode, KifuPath, Markup } from '../kifu';
 import { BoardSize, Color, Field, Move, Point, Vector } from '../types';
-import { EventEmitter } from '../utils/EventEmitter';
+import { EventEmitter, Event } from '../utils/EventEmitter';
 import { EditorConfig, defaultEditorConfig } from './EditorConfig';
 import { EditorHistoryManager, EditorHistoryOperation } from './EditorHistoryManager';
 
@@ -10,7 +10,10 @@ interface EditorEvents {
   nodeChange: { node: KifuNode };
   gameInfoChange: { gameInfo: KifuInfo };
   gameStateChange: { gameState: GameState };
+  viewportChange: { boardSection: Vector | null };
 }
+
+export type EditorEvent<T extends keyof EditorEvents> = Event<EditorEvents, T, Editor>;
 
 /**
  * Headless go games editor. It can load game record (SGF), or create a new one. Then it can be used to
@@ -37,6 +40,7 @@ interface EditorEvents {
  * - isLast
  * - isValidMove
  * - getVariations
+ * - getMarkup
  *
  * Methods for editing:
  * - play
@@ -81,12 +85,6 @@ export class Editor extends EventEmitter<EditorEvents> {
   gameState: GameState;
 
   /**
-   * Go game evaluator class. It contains method to check validity of move according to the rules. In future
-   * there could be score calculation methods too.
-   */
-  gameEvaluator: GameEvaluator;
-
-  /**
    * Currently visited node of the kifu (go game record). It shouldn't be modified directly, use editor methods
    * to add properties to it.
    */
@@ -97,6 +95,11 @@ export class Editor extends EventEmitter<EditorEvents> {
    * it is the only primary state property of the editor. Other properties are derived or calculated.
    */
   currentPath: KifuPath;
+
+  /**
+   * Go game rules used for detecting move validity. In future there could be score calculation methods too.
+   */
+  #rules: Rules;
 
   /**
    * Internal manager of editor history. Each mutating operation is saved here and can be undone later.
@@ -120,6 +123,13 @@ export class Editor extends EventEmitter<EditorEvents> {
   #visitedVariations: Map<KifuNode, KifuNode>;
 
   /**
+   * Current board section / viewport. It is used to determine which part of the board should be displayed.
+   * This is available in `gameState.properties.boardSection` property. This variable is used just to detect
+   * changes effectively.
+   */
+  #boardSection?: Vector;
+
+  /**
    * Creates new instance of editor. You can specify configuration object to customize editor. Configuration
    * will be merged with default values and cannot be changed later.
    */
@@ -136,16 +146,23 @@ export class Editor extends EventEmitter<EditorEvents> {
    * If you would need for some reason to change board size, manually update `kifu.info.boardSize` property and reload
    * the game.
    */
-  newGame(size: BoardSize = this.config.defaultBoardSize, rules: Rules = this.config.defaultRules) {
-    const kifu = new Kifu();
-    kifu.info.boardSize = size;
-    if (rules && rules.name) {
-      kifu.info.rules = rules.name;
-    }
-
-    this.kifu = kifu;
-    this.kifu.info.komi = rules.komi;
-    this.#initGame(rules);
+  newGame({
+    size = this.config.defaultBoardSize,
+    rules = this.config.defaultRules,
+    komi = this.config.defaultKomi,
+  }: {
+    size?: BoardSize;
+    rules?: Rules;
+    komi?: number;
+  } = {}) {
+    this.#initGame(
+      new Kifu({
+        boardSize: size,
+        rules: rules.name,
+        komi: komi,
+      }),
+      rules,
+    );
   }
 
   /**
@@ -161,16 +178,7 @@ export class Editor extends EventEmitter<EditorEvents> {
    * ```
    */
   loadKifu(kifu: Kifu) {
-    this.kifu = kifu;
-    let rules = kifu.info.rules
-      ? sgfRulesMap[kifu.info.rules as keyof typeof sgfRulesMap]
-      : this.config.defaultRules;
-
-    if (kifu.info.komi != null) {
-      rules = { ...rules, komi: kifu.info.komi };
-    }
-
-    this.#initGame(rules);
+    this.#initGame(kifu, kifu.info.rules ? sgfRulesMap[kifu.info.rules] : this.config.defaultRules);
   }
 
   /**
@@ -378,10 +386,9 @@ export class Editor extends EventEmitter<EditorEvents> {
    * Returns true, if specified move can be played in the current position with given rule set.
    */
   isValidMove(x: number, y: number): boolean {
-    return this.gameEvaluator.isValidMove(
-      this.gameState.position,
+    return this.#rules.isValidMove(
       { x, y, c: this.gameState.player },
-      this.#previousGameStates,
+      { gameState: this.gameState, previousGameStates: this.#previousGameStates },
     );
   }
 
@@ -407,14 +414,22 @@ export class Editor extends EventEmitter<EditorEvents> {
   }
 
   /**
+   * Returns markup for current node, respectively markup, which should be displayed on the board at this moment.
+   * This includes markup from `currentNode.markup` and inherited markup from previous nodes
+   */
+  getMarkup(): ReadonlyArray<Markup> {
+    return this.currentNode.markup;
+  }
+
+  /**
    * Play specified move. Move will be played by current player and executed even if invalid. Technically new kifu node
    * will be created witch specified move and then editor will move to it.
    */
   play(x: number, y: number) {
     const node = KifuNode.fromJS({ move: { x, y, c: this.gameState.player } });
     const nodeIndex = this.currentNode.children.push(node);
-    this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
     this.next(nodeIndex - 1);
+    this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
   }
 
   /**
@@ -518,8 +533,10 @@ export class Editor extends EventEmitter<EditorEvents> {
       this.next(nodeIndex - 1);
     } else {
       this.currentNode.addSetup(setup);
+      this.gameState.position.set(setup.x, setup.y, setup.c);
       this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
       this.emit('gameStateChange', { gameState: this.gameState });
+      this.emit('nodeChange', { node: this.currentNode });
     }
   }
 
@@ -603,7 +620,7 @@ export class Editor extends EventEmitter<EditorEvents> {
    */
   undo() {
     const operation = this.#historyManager.undo();
-
+    console.log('undo', operation);
     if (operation) {
       this.#applyChanges(operation);
     }
@@ -621,7 +638,7 @@ export class Editor extends EventEmitter<EditorEvents> {
    */
   redo() {
     const operation = this.#historyManager.redo();
-
+    console.log('redo', operation);
     if (operation) {
       this.#applyChanges(operation);
     }
@@ -634,18 +651,19 @@ export class Editor extends EventEmitter<EditorEvents> {
     return this.#historyManager.canRedo();
   }
 
-  #initGame(rules?: Rules) {
-    this.#previousGameStates = [];
-    this.#previousNodes = [];
-    this.#historyManager = new EditorHistoryManager(this.kifu);
-    this.#visitedVariations = new Map();
-    this.gameEvaluator = new GameEvaluator(rules || this.config.defaultRules);
-
+  #initGame(kifu: Kifu, rules: Rules) {
+    this.kifu = kifu;
     this.currentNode = this.kifu.root;
     this.currentPath = {
       moveNumber: 0,
       variations: [],
     };
+
+    this.#previousGameStates = [];
+    this.#previousNodes = [];
+    this.#historyManager = new EditorHistoryManager(kifu);
+    this.#visitedVariations = new Map();
+    this.#rules = rules;
 
     this.#initGameState();
     this.emit('gameLoad');
@@ -655,7 +673,7 @@ export class Editor extends EventEmitter<EditorEvents> {
   #initGameState() {
     const size = this.kifu.info.boardSize;
     this.gameState = new GameState(
-      typeof size === 'object' ? new Position(size.cols, size.rows) : new Position(size),
+      typeof size === 'object' ? new BoardPosition(size.cols, size.rows) : new BoardPosition(size),
     );
 
     if (this.kifu.info.handicap && this.kifu.info.handicap > 1) {
@@ -679,6 +697,24 @@ export class Editor extends EventEmitter<EditorEvents> {
 
     if (this.currentNode.player) {
       this.gameState.player = this.currentNode.player;
+    }
+
+    // These properties are not exactly related to game, but are inherited,
+    // so are saved in the game state.
+    if (this.currentNode.boardSection !== undefined) {
+      if (this.currentNode.boardSection) {
+        this.gameState.properties.boardSection = this.currentNode.boardSection;
+      } else {
+        delete this.gameState.properties.boardSection;
+      }
+    }
+
+    if (this.currentNode.dim) {
+      if (this.currentNode.dim.length) {
+        this.gameState.properties.dim = this.currentNode.dim;
+      } else {
+        delete this.gameState.properties.dim;
+      }
     }
   }
 
@@ -803,5 +839,10 @@ export class Editor extends EventEmitter<EditorEvents> {
   #emitNodeChangeEvents() {
     this.emit('gameStateChange', { gameState: this.gameState });
     this.emit('nodeChange', { node: this.currentNode });
+
+    if (this.#boardSection !== this.gameState.properties.boardSection) {
+      this.#boardSection = this.gameState.properties.boardSection;
+      this.emit('viewportChange', { boardSection: this.#boardSection || null });
+    }
   }
 }

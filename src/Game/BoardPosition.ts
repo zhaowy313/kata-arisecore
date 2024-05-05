@@ -1,13 +1,16 @@
 import { Color } from '../types';
 
 /**
- * Position class represents a state of the go game in one moment in time. It is composed from a grid containing black
- * and white stones, capture counts, and actual turn. It is designed to be mutable.
+ * BoardPosition class represents position on the go board - it contains a grid with black
+ * and white stones. It is designed to be mutable. Beside simple methods to set and get stones
+ * there are methods to make moves, check liberties or capture stones.
  */
-export class Position {
+export class BoardPosition {
   /**
    * One dimensional array containing stones of the position.
    */
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
   #grid: Color[][];
 
   /**
@@ -70,8 +73,8 @@ export class Position {
   /**
    * Clones the whole position.
    */
-  clone(): Position {
-    const clone = new Position(this.rows, this.cols);
+  clone(): BoardPosition {
+    const clone = new BoardPosition(this.rows, this.cols);
     clone.#grid = this.#grid.map((row) => [...row]);
     return clone;
   }
@@ -79,7 +82,7 @@ export class Position {
   /**
    * Compares this position with another position, if positions are same true is returned.
    */
-  equals(position: Position): boolean {
+  equals(position: BoardPosition): boolean {
     if (position.rows !== this.rows && position.cols !== this.cols) {
       return false;
     }
@@ -176,7 +179,8 @@ export class Position {
 
   /**
    * Sets stone on given coordinates and capture adjacent stones without liberties if there are any.
-   * Stone is set even if field is not empty. Returns number of captured stones.
+   * This method ignores go game rules, stone is set even if field is not empty. If you want to check
+   * if move is valid, use some Rules object. Returns number of captured stones.
    */
   makeMove(x: number, y: number, color: Color): number {
     let captures = 0;

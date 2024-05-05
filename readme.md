@@ -226,7 +226,6 @@ const node = new KifuNode();
 // Available point markups
 node.addMarkup({ type: MarkupType.Triangle, x: 1, y: 1 });
 node.addMarkup({ type: MarkupType.Circle, x: 1, y: 2 });
-node.addMarkup({ type: MarkupType.Dim, x: 1, y: 3 });
 node.addMarkup({ type: MarkupType.XMark, x: 1, y: 4 });
 node.addMarkup({ type: MarkupType.Square, x: 1, y: 5 });
 node.addMarkup({ type: MarkupType.Selected, x: 1, y: 6 });
