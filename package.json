@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "rollup -c rollup.config.js",
     "watch": "rollup -c rollup.config.js -w",
-    "test": "mocha --extension ts --require ts-node/register"
+    "test": "vitest"
   },
   "repository": {
     "type": "git",
@@ -25,21 +25,19 @@
   },
   "homepage": "http://waltheri.github.io/wgo.js",
   "devDependencies": {
-    "@types/mocha": "^5.2.6",
     "@types/node": "^20.8.8",
     "@typescript-eslint/eslint-plugin": "^6.7.0",
     "@typescript-eslint/parser": "^6.7.0",
-    "chai": "^4.2.0",
     "eslint": "^8.49.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-import": "^2.28.1",
     "eslint-plugin-prettier": "^5.0.0",
-    "mocha": "^6.1.4",
     "prettier": "^3.0.3",
     "ts-node": "^8.1.0",
     "tslib": "^2.0.1",
     "typedoc": "^0.25.1",
     "typescript": "^4.9.5",
-    "vite": "^4.5.0"
+    "vite": "^4.5.0",
+    "vitest": "^1.6.0"
   }
 }

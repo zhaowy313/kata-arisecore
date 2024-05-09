@@ -1,4 +1,4 @@
-import { Rules, sgfRulesMap, GameState, Game } from '../game';
+import { Rules, sgfRulesMap, GameState, Game, BoardPosition } from '../game';
 import { Kifu, KifuInfo, KifuNode, KifuPath, Markup } from '../kifu';
 import { BoardSize, Color, Field, Point, Vector } from '../types';
 import { EventEmitter, Event } from '../utils/EventEmitter';
@@ -6,10 +6,47 @@ import { EditorConfig, defaultEditorConfig } from './EditorConfig';
 import { EditorHistoryManager, EditorHistoryOperation } from './EditorHistoryManager';
 
 export interface EditorEvents {
+  /**
+   * Emitted when game is loaded. This event is emitted just once after loading the kifu. No other event is emitted here,
+   * so you should use this event to initialize board, set initial position, game info etc.
+   */
   gameLoad: Record<string, never>;
+
+  /**
+   * Emitted when current node changes. This is called during traversing the kifu, but also when some node property
+   * is updated. It may be good idea to register this event to update board markup, comments etc. It is not guaranteed
+   * that this is not called when nothing changes, however if you go to last move of the kifu, only one event
+   * should be emitted (for the last node).
+   */
   nodeChange: { node: KifuNode };
+
+  /**
+   * Emitted when game info changes. This is not called when game is loaded, but only when game info is updated.
+   */
   gameInfoChange: { gameInfo: KifuInfo };
+
+  /**
+   * Emitted when any game state changes. This includes:
+   *
+   * - position
+   * - captured stones
+   * - player to move
+   * - other game state properties
+   *
+   * This event van be emitted, even nothing in game changes - for example after traversing on empty node.
+   */
   gameStateChange: { gameState: GameState };
+
+  /**
+   * Emitted when board position changes. This event can be used to update board view. Editor will try to emit this
+   * only if the position differs from the previous one, however in some edge cases this can be called when the
+   * position is the same.
+   */
+  positionChange: { position: BoardPosition };
+
+  /**
+   * Emitted when board section changes. This is used to determine which part of the board should be displayed.
+   */
   viewportChange: { boardSection: Vector | null };
 }
 
@@ -122,6 +159,16 @@ export class Editor extends EventEmitter<EditorEvents> {
   #boardSection?: Vector;
 
   /**
+   * Internal flag to prevent extra events when traversing the kifu.
+   */
+  #inTransition = false;
+
+  /**
+   * Internal flag which marks, that position has changed. This should be set in transitions.
+   */
+  #hasPositionChanged = false;
+
+  /**
    * Creates new instance of editor. You can specify configuration object to customize editor. Configuration
    * will be merged with default values and cannot be changed later.
    */
@@ -178,90 +225,66 @@ export class Editor extends EventEmitter<EditorEvents> {
    * nothing happens and false is returned.
    */
   next(node?: number | KifuNode) {
-    const result = this.#executeNextNode(node);
-
-    if (result) {
-      this.#emitNodeChangeEvents();
-    }
-
-    return result;
+    return this.#transition(() => this.#executeNextNode(node));
   }
 
   /**
    * Go to previous move (node). If there is no previous move, nothing happens.
    */
   previous() {
-    const result = this.#executePreviousNode();
-
-    if (result) {
-      this.#emitNodeChangeEvents();
-    }
-
-    return result;
+    return this.#transition(() => this.#executePreviousNode());
   }
 
   /**
    * Go to last move (node). If there are variations in the kifu, it will go to the last visited variation.
    */
   last() {
-    const currentMoveNumber = this.currentPath.moveNumber;
+    return this.#transition(() => {
+      const currentMoveNumber = this.currentPath.moveNumber;
 
-    while (this.#executeNextNode());
+      while (this.#executeNextNode());
 
-    if (currentMoveNumber !== this.currentPath.moveNumber) {
-      this.#emitNodeChangeEvents();
-      return true;
-    }
-
-    return false;
+      return currentMoveNumber !== this.currentPath.moveNumber;
+    });
   }
 
   /**
    * Go to initial position (root node).
    */
   first() {
-    const currentMoveNumber = this.currentPath.moveNumber;
+    return this.#transition(() => {
+      const currentMoveNumber = this.currentPath.moveNumber;
 
-    while (this.#executePreviousNode());
+      while (this.#executePreviousNode());
 
-    if (currentMoveNumber !== this.currentPath.moveNumber) {
-      this.#emitNodeChangeEvents();
-      return true;
-    }
-
-    return false;
+      return currentMoveNumber !== this.currentPath.moveNumber;
+    });
   }
 
   /**
    * Go to the next fork (node with more than one child). If there is no fork, it is the same as `last()`.
    */
   nextFork() {
-    const currentMoveNumber = this.currentPath.moveNumber;
+    return this.#transition(() => {
+      const currentMoveNumber = this.currentPath.moveNumber;
 
-    while (this.#executeNextNode() && this.currentNode.children.length < 2);
+      while (this.#executeNextNode() && this.currentNode.children.length < 2);
 
-    if (currentMoveNumber !== this.currentPath.moveNumber) {
-      this.#emitNodeChangeEvents();
-      return true;
-    }
-
-    return false;
+      return currentMoveNumber !== this.currentPath.moveNumber;
+    });
   }
 
   /**
    * Go to the previous fork (node with more than one child). If there is no fork, it is the same as `first()`.
    */
   previousFork() {
-    const currentMoveNumber = this.currentPath.moveNumber;
+    return this.#transition(() => {
+      const currentMoveNumber = this.currentPath.moveNumber;
 
-    while (this.#executePreviousNode() && this.currentNode.children.length < 2);
+      while (this.#executePreviousNode() && this.currentNode.children.length < 2);
 
-    if (currentMoveNumber !== this.currentPath.moveNumber) {
-      this.#emitNodeChangeEvents();
-      return true;
-    }
-
-    return false;
+      return currentMoveNumber !== this.currentPath.moveNumber;
+    });
   }
 
   /**
@@ -281,32 +304,35 @@ export class Editor extends EventEmitter<EditorEvents> {
    * ```
    */
   goTo(pathOrMoveNumber: KifuPath | number | KifuNode) {
-    while (this.#executePreviousNode()); // this could be improved, we could go back just to the common ancestor
-
     let path: KifuPath | undefined;
-    if (pathOrMoveNumber instanceof KifuNode) {
-      path = this.kifu.getPath(pathOrMoveNumber);
-    } else if (typeof pathOrMoveNumber === 'number') {
-      path = { moveNumber: pathOrMoveNumber, variations: [] };
-    } else {
-      path = pathOrMoveNumber;
-    }
 
-    if (path == null) {
-      return false;
-    }
+    const transitioned = this.#transition(() => {
+      while (this.#executePreviousNode()); // this could be improved, we could go back just to the common ancestor
 
-    for (let i = 0, j = 0; i < path.moveNumber; i++) {
-      const nodeIndex = this.currentNode.children.length > 1 ? path.variations[j++] : undefined;
-
-      if (!this.#executeNextNode(nodeIndex)) {
-        break;
+      if (pathOrMoveNumber instanceof KifuNode) {
+        path = this.kifu.getPath(pathOrMoveNumber);
+      } else if (typeof pathOrMoveNumber === 'number') {
+        path = { moveNumber: pathOrMoveNumber, variations: [] };
+      } else {
+        path = pathOrMoveNumber;
       }
-    }
 
-    this.#emitNodeChangeEvents();
+      if (path == null) {
+        return false;
+      }
 
-    return path.moveNumber === this.currentPath.moveNumber;
+      for (let i = 0, j = 0; i < path.moveNumber; i++) {
+        const nodeIndex = this.currentNode.children.length > 1 ? path.variations[j++] : undefined;
+
+        if (!this.#executeNextNode(nodeIndex)) {
+          break;
+        }
+      }
+
+      return true;
+    });
+
+    return transitioned && path!.moveNumber === this.currentPath.moveNumber;
   }
 
   /**
@@ -451,19 +477,22 @@ export class Editor extends EventEmitter<EditorEvents> {
    * for editing existing move. When adding new move, use `play()` method instead, which creates a new node.
    */
   setMove(x: number, y: number, color: Color.Black | Color.White) {
-    this.currentNode.move = { x, y, c: color };
-    this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
-    this.#reExecuteCurrentNode();
+    this.#transition(() => {
+      this.currentNode.move = { x, y, c: color };
+      this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
+      this.#reExecuteCurrentNode();
+    });
   }
 
   /**
    * Set current player. This will not affect current position, but it will affect next move.
    */
   setPlayer(color: Color.Black | Color.White) {
-    this.#game.currentState.player = color;
-    this.currentNode.player = color;
-    this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
-    this.emit('gameStateChange', { gameState: this.#game.currentState });
+    this.#transition(() => {
+      this.#game.currentState.player = color;
+      this.currentNode.player = color;
+      this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
+    });
   }
 
   /**
@@ -475,7 +504,7 @@ export class Editor extends EventEmitter<EditorEvents> {
       this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
       this.next(index);
     } else {
-      const nodeIndex = this.currentNode.children.push(node);
+      const nodeIndex = this.currentNode.children.push(node) - 1;
       this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
       this.next(nodeIndex);
     }
@@ -530,18 +559,22 @@ export class Editor extends EventEmitter<EditorEvents> {
    * ```
    */
   addSetup(setup: Field) {
-    if (this.currentNode.move) {
-      const node = KifuNode.fromJS({ setup: [setup] });
-      const nodeIndex = this.currentNode.children.push(node);
-      this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
-      this.next(nodeIndex - 1);
-    } else {
-      this.currentNode.addSetup(setup);
-      this.#game.currentState.position.set(setup.x, setup.y, setup.c);
-      this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
-      this.emit('gameStateChange', { gameState: this.#game.currentState });
-      this.emit('nodeChange', { node: this.currentNode });
-    }
+    this.#transition(() => {
+      if (this.currentNode.move) {
+        const node = KifuNode.fromJS({ setup: [setup] });
+        const nodeIndex = this.currentNode.children.push(node);
+        this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
+        this.next(nodeIndex - 1);
+      } else {
+        this.currentNode.addSetup(setup);
+        if (this.#game.currentState.position.get(setup.x, setup.y) !== setup.c) {
+          this.#game.currentState.position.set(setup.x, setup.y, setup.c);
+          this.#hasPositionChanged = true;
+        }
+        this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
+      }
+      return true;
+    });
   }
 
   /**
@@ -592,14 +625,23 @@ export class Editor extends EventEmitter<EditorEvents> {
    * object, whose properties will be assigned to the current node. This creates record in history, so changes can be undone.
    */
   updateCurrentNode(update: ((node: KifuNode) => void) | Partial<KifuNode>) {
-    if (typeof update === 'function') {
-      update(this.currentNode);
-    } else {
-      Object.assign(this.currentNode, update);
-    }
+    this.#transition(() => {
+      const prevSetup = this.currentNode.setup;
+      const prevMove = this.currentNode.move;
 
-    this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
-    this.#reExecuteCurrentNode();
+      if (typeof update === 'function') {
+        update(this.currentNode);
+      } else {
+        Object.assign(this.currentNode, update);
+      }
+
+      if (prevSetup !== this.currentNode.setup || prevMove !== this.currentNode.move) {
+        this.#hasPositionChanged = true;
+      }
+
+      this.#historyManager.addNodeUpdateOperation(this.currentPath, this.currentNode);
+      this.#reExecuteCurrentNode();
+    });
   }
 
   /**
@@ -675,16 +717,22 @@ export class Editor extends EventEmitter<EditorEvents> {
 
     this.#updateGameFromNode();
     this.emit('gameLoad');
-    this.#emitNodeChangeEvents();
   }
 
   #updateGameFromNode() {
-    this.currentNode.setup.forEach((setup) =>
-      this.#game.currentState.position.set(setup.x, setup.y, setup.c),
-    );
+    this.currentNode.setup.forEach((setup) => {
+      if (this.#game.currentState.position.get(setup.x, setup.y) !== setup.c) {
+        this.#game.currentState.position.set(setup.x, setup.y, setup.c);
+        this.#hasPositionChanged = true;
+      }
+    });
 
     if (this.currentNode.move) {
       this.#game.makeMove(this.currentNode.move);
+
+      if ('x' in this.currentNode.move) {
+        this.#hasPositionChanged = true;
+      }
     }
 
     if (this.currentNode.player) {
@@ -788,6 +836,10 @@ export class Editor extends EventEmitter<EditorEvents> {
       return false;
     }
 
+    if ((this.currentNode.move && 'x' in this.currentNode.move) || this.currentNode.setup.length) {
+      this.#hasPositionChanged = true;
+    }
+
     this.currentNode = this.#previousNodes.pop()!;
     this.#game.previous();
 
@@ -804,20 +856,48 @@ export class Editor extends EventEmitter<EditorEvents> {
   #reExecuteCurrentNode() {
     if (this.currentNode === this.kifu.root) {
       this.#game.initial();
-      this.#emitNodeChangeEvents();
+      this.#updateGameFromNode();
     } else {
       this.#executePreviousNode();
       this.next();
     }
   }
 
-  #emitNodeChangeEvents() {
-    this.emit('gameStateChange', { gameState: this.#game.currentState });
-    this.emit('nodeChange', { node: this.currentNode });
-
-    if (this.#boardSection !== this.#game.currentState.properties.boardSection) {
-      this.#boardSection = this.#game.currentState.properties.boardSection;
-      this.emit('viewportChange', { boardSection: this.#boardSection || null });
+  /**
+   * Transition between two nodes. If callback returns true, then the transition is successful and events are emitted.
+   * If this method is called inside another transition, then events won't be emitted.
+   */
+  #transition(cb: () => boolean | void) {
+    if (this.#inTransition) {
+      return cb();
     }
+
+    this.#inTransition = true;
+    const currentGameState = {
+      ...this.#game.currentState,
+      properties: { ...this.#game.currentState.properties },
+    };
+    const result = cb();
+    this.#inTransition = false;
+
+    if (result !== false) {
+      this.emit('nodeChange', { node: this.currentNode });
+      this.emit('gameStateChange', { gameState: this.#game.currentState });
+
+      if (this.#hasPositionChanged) {
+        this.#hasPositionChanged = false;
+        this.emit('positionChange', { position: this.#game.currentState.position });
+      }
+
+      if (
+        currentGameState.properties.boardSection !== this.#game.currentState.properties.boardSection
+      ) {
+        this.emit('viewportChange', {
+          boardSection: this.#game.currentState.properties.boardSection || null,
+        });
+      }
+    }
+
+    return result;
   }
 }

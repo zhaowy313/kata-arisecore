@@ -1,273 +1,275 @@
 /* Test of WGo.Game class and (handling of go game) */
 import { Game, BoardPosition, sgfRulesMap, NoRules } from '../src/game';
 import { Color } from '../src/types';
-import assert, { strictEqual, deepEqual } from 'assert';
+import { describe, test, expect, beforeEach } from 'vitest';
 
-describe('Game object', () => {
-  describe('Constructor', () => {
-    it('Game is correctly created.', () => {
-      const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5, handicap: 0 });
-      strictEqual(game.size, 19);
-      strictEqual(game.currentState.position.cols, 19);
-      strictEqual(game.currentState.position.rows, 19);
-      deepEqual(game.rules, sgfRulesMap.Japanese);
-      strictEqual(game.currentState.player, Color.Black);
-      strictEqual(game.komi, 6.5);
-      strictEqual(game.currentState.blackCaptures, 0);
-      strictEqual(game.currentState.whiteCaptures, 0);
-      deepEqual(game.currentState.position, new BoardPosition());
-    });
+describe('Constructor', () => {
+  test('Game is correctly created.', () => {
+    const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5, handicap: 0 });
 
-    it('Rectangular board size, chines rules', () => {
-      const game = new Game({
-        size: { cols: 13, rows: 17 },
-        rules: sgfRulesMap.Chinese,
-        komi: 0.5,
-      });
-      deepEqual(game.size, { cols: 13, rows: 17 });
-      strictEqual(game.rules, sgfRulesMap.Chinese);
-      strictEqual(game.komi, 0.5);
-      strictEqual(game.currentState.position.cols, 13);
-      strictEqual(game.currentState.position.rows, 17);
-      deepEqual(game.currentState.position, new BoardPosition(13, 17));
-    });
-
-    it('1 handicap', () => {
-      const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 0.5, handicap: 1 });
-      strictEqual(game.handicap, 1);
-      strictEqual(game.currentState.player, Color.Black);
-    });
-
-    it('2 handicaps', () => {
-      const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 0.5, handicap: 2 });
-      strictEqual(game.handicap, 2);
-      strictEqual(game.currentState.player, Color.White);
-    });
+    expect(game.size).toBe(19);
+    expect(game.currentState.position.cols).toBe(19);
+    expect(game.currentState.position.rows).toBe(19);
+    expect(game.rules).toEqual(sgfRulesMap.Japanese);
+    expect(game.currentState.player).toBe(Color.Black);
+    expect(game.komi).toBe(6.5);
+    expect(game.currentState.blackCaptures).toBe(0);
+    expect(game.currentState.whiteCaptures).toBe(0);
+    expect(game.currentState.position).toEqual(new BoardPosition());
   });
 
-  describe('Method makeMove', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    let game: Game;
-
-    beforeEach(() => {
-      game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5, handicap: 0 });
+  test('Rectangular board size, chines rules', () => {
+    const game = new Game({
+      size: { cols: 13, rows: 17 },
+      rules: sgfRulesMap.Chinese,
+      komi: 0.5,
     });
 
-    it('Basic Game#makeMove() functionality.', () => {
-      game.makeMove({ x: 4, y: 4, c: Color.Black });
-
-      strictEqual(game.currentState.position.get(4, 4), Color.Black);
-      strictEqual(game.currentState.player, Color.White);
-      strictEqual(game.currentState.blackCaptures, 0);
-      strictEqual(game.currentState.whiteCaptures, 0);
-    });
-
-    it('Capturing stones', () => {
-      game.currentState.position.set(0, 0, Color.Black);
-      game.currentState.position.set(0, 1, Color.Black);
-      game.currentState.position.set(1, 0, Color.Black);
-      game.currentState.position.set(1, 1, Color.Black);
-      game.currentState.position.set(0, 2, Color.White);
-      game.currentState.position.set(1, 2, Color.White);
-      game.currentState.position.set(2, 0, Color.White);
-
-      game.makeMove({ x: 2, y: 1, c: Color.White });
-
-      strictEqual(game.currentState.position.get(0, 0), Color.Empty);
-      strictEqual(game.currentState.position.get(0, 1), Color.Empty);
-      strictEqual(game.currentState.position.get(1, 0), Color.Empty);
-      strictEqual(game.currentState.position.get(1, 1), Color.Empty);
-      strictEqual(game.currentState.position.get(2, 1), Color.White);
-      strictEqual(game.currentState.blackCaptures, 0);
-      strictEqual(game.currentState.whiteCaptures, 4);
-    });
-
-    it('Illegal moves can be played', () => {
-      game.currentState.position.set(0, 0, Color.Black);
-      game.currentState.position.set(1, 0, Color.Black);
-      game.currentState.position.set(0, 1, Color.White);
-
-      game.makeMove({ x: 1, y: 0, c: Color.White });
-      strictEqual(game.currentState.blackCaptures, 0);
-      strictEqual(game.currentState.whiteCaptures, 1);
-      strictEqual(game.currentState.position.get(1, 0), Color.White);
-
-      game.makeMove({ x: 0, y: 1, c: Color.Black });
-      strictEqual(game.currentState.blackCaptures, 0);
-      strictEqual(game.currentState.whiteCaptures, 1);
-      strictEqual(game.currentState.position.get(0, 1), Color.Black);
-    });
+    expect(game.size).toEqual({ cols: 13, rows: 17 });
+    expect(game.rules).toEqual(sgfRulesMap.Chinese);
+    expect(game.komi).toBe(0.5);
+    expect(game.currentState.position.cols).toBe(13);
+    expect(game.currentState.position.rows).toBe(17);
+    expect(game.currentState.position).toEqual(new BoardPosition(13, 17));
   });
 
-  describe('Check validity', () => {
-    it('Invalid moves', () => {
-      const game = new Game({ size: 9, rules: sgfRulesMap.Japanese, komi: 6.5 });
+  test('1 handicap', () => {
+    const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 0.5, handicap: 1 });
 
-      game.currentState.position.set(0, 1, Color.Black);
-      game.currentState.position.set(1, 0, Color.White);
+    expect(game.handicap).toBe(1);
+    expect(game.currentState.player).toBe(Color.Black);
+  });
 
-      const clonedPos = game.currentState.position.clone();
+  test('2 handicaps', () => {
+    const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 0.5, handicap: 2 });
 
-      assert(!game.isValidMove(0, 1));
-      assert(!game.isValidMove(1, 0));
-      assert(!game.isValidMove(0, -1));
-      assert(!game.isValidMove(-1, 0));
-      assert(!game.isValidMove(0, 9));
-      assert(!game.isValidMove(9, 0));
+    expect(game.handicap).toBe(2);
+    expect(game.currentState.player).toBe(Color.White);
+  });
+});
 
-      deepEqual(game.currentState.position, clonedPos);
-    });
+describe('Method makeMove', () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let game: Game;
 
-    it('Disallow suicide', () => {
-      const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5 });
+  beforeEach(() => {
+    game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5, handicap: 0 });
+  });
 
-      game.currentState.position.set(0, 1, Color.White);
-      game.currentState.position.set(0, 2, Color.Black);
-      game.currentState.position.set(1, 0, Color.Black);
-      game.currentState.position.set(1, 1, Color.Black);
+  test('Basic Game#makeMove() functionality.', () => {
+    game.makeMove({ x: 4, y: 4, c: Color.Black });
 
-      game.currentState.player = Color.White;
-      assert(!game.isValidMove(0, 0));
-    });
+    expect(game.currentState.position.get(4, 4)).toBe(Color.Black);
+    expect(game.currentState.player).toBe(Color.White);
+    expect(game.currentState.blackCaptures).toBe(0);
+    expect(game.currentState.whiteCaptures).toBe(0);
+  });
 
-    it('Allow suicide in ING rules', () => {
-      const game = new Game({ size: 19, rules: sgfRulesMap.GOE, komi: 6.5 });
+  test('Capturing stones', () => {
+    game.currentState.position.set(0, 0, Color.Black);
+    game.currentState.position.set(0, 1, Color.Black);
+    game.currentState.position.set(1, 0, Color.Black);
+    game.currentState.position.set(1, 1, Color.Black);
+    game.currentState.position.set(0, 2, Color.White);
+    game.currentState.position.set(1, 2, Color.White);
+    game.currentState.position.set(2, 0, Color.White);
 
-      game.currentState.position.set(0, 1, Color.White);
-      game.currentState.position.set(0, 2, Color.Black);
-      game.currentState.position.set(1, 0, Color.Black);
-      game.currentState.position.set(1, 1, Color.Black);
+    game.makeMove({ x: 2, y: 1, c: Color.White });
 
-      game.currentState.player = Color.White;
-      assert(game.isValidMove(0, 0));
+    expect(game.currentState.position.get(0, 0)).toBe(Color.Empty);
+    expect(game.currentState.position.get(0, 1)).toBe(Color.Empty);
+    expect(game.currentState.position.get(1, 0)).toBe(Color.Empty);
+    expect(game.currentState.position.get(1, 1)).toBe(Color.Empty);
+    expect(game.currentState.position.get(2, 1)).toBe(Color.White);
+    expect(game.currentState.blackCaptures).toBe(0);
+    expect(game.currentState.whiteCaptures).toBe(4);
+  });
 
-      game.play(0, 0);
+  test('Illegal moves can be played', () => {
+    game.currentState.position.set(0, 0, Color.Black);
+    game.currentState.position.set(1, 0, Color.Black);
+    game.currentState.position.set(0, 1, Color.White);
 
-      strictEqual(game.currentState.blackCaptures, 2);
-      strictEqual(game.currentState.whiteCaptures, 0);
-      strictEqual(game.currentState.position.get(0, 0), Color.Empty);
-      strictEqual(game.currentState.position.get(0, 1), Color.Empty);
-    });
+    game.makeMove({ x: 1, y: 0, c: Color.White });
+    expect(game.currentState.blackCaptures).toBe(0);
+    expect(game.currentState.whiteCaptures).toBe(1);
+    expect(game.currentState.position.get(1, 0)).toBe(Color.White);
 
-    it('Disallow Ko (repeating of previous position)', () => {
-      const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5 });
+    game.makeMove({ x: 0, y: 1, c: Color.Black });
+    expect(game.currentState.blackCaptures).toBe(0);
+    expect(game.currentState.whiteCaptures).toBe(1);
+    expect(game.currentState.position.get(0, 1)).toBe(Color.Black);
+  });
+});
 
-      game.currentState.position.set(0, 1, Color.Black);
-      game.currentState.position.set(1, 0, Color.Black);
-      game.currentState.position.set(2, 1, Color.Black);
-      game.currentState.position.set(0, 2, Color.White);
-      game.currentState.position.set(1, 3, Color.White);
-      game.currentState.position.set(2, 2, Color.White);
+describe('Check validity', () => {
+  test('Invalid moves', () => {
+    const game = new Game({ size: 9, rules: sgfRulesMap.Japanese, komi: 6.5 });
 
-      game.play(1, 2); // creates KO
-      game.play(1, 1); // white captures
+    game.currentState.position.set(0, 1, Color.Black);
+    game.currentState.position.set(1, 0, Color.White);
 
-      strictEqual(game.currentState.whiteCaptures, 1);
-      strictEqual(game.currentState.blackCaptures, 0);
-      strictEqual(game.currentState.position.get(1, 2), Color.Empty);
-      strictEqual(game.currentState.position.get(1, 1), Color.White);
+    const clonedPos = game.currentState.position.clone();
 
-      assert(!game.isValidMove(1, 2)); // invalid capture
+    expect(game.isValidMove(0, 1)).toBe(false);
+    expect(game.isValidMove(1, 0)).toBe(false);
+    expect(game.isValidMove(0, -1)).toBe(false);
+    expect(game.isValidMove(-1, 0)).toBe(false);
+    expect(game.isValidMove(0, 9)).toBe(false);
+    expect(game.isValidMove(9, 0)).toBe(false);
 
-      game.play(5, 5); // ko threat
-      game.play(6, 6); // answer
+    expect(game.currentState.position).toEqual(clonedPos);
+  });
 
-      assert(game.isValidMove(1, 2)); // black captures
-    });
+  test('Disallow suicide', () => {
+    const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5 });
 
-    it('Allow Ko in no rules', () => {
-      const game = new Game({ size: 19, rules: new NoRules(), komi: 6.5 });
+    game.currentState.position.set(0, 1, Color.White);
+    game.currentState.position.set(0, 2, Color.Black);
+    game.currentState.position.set(1, 0, Color.Black);
+    game.currentState.position.set(1, 1, Color.Black);
 
-      game.currentState.position.set(0, 1, Color.Black);
-      game.currentState.position.set(1, 0, Color.Black);
-      game.currentState.position.set(2, 1, Color.Black);
-      game.currentState.position.set(0, 2, Color.White);
-      game.currentState.position.set(1, 3, Color.White);
-      game.currentState.position.set(2, 2, Color.White);
+    game.currentState.player = Color.White;
+    expect(game.isValidMove(0, 0)).toBe(false);
+  });
 
-      game.play(1, 2); // creates KO
-      game.play(1, 1); // white captures
+  test('Allow suicide in ING rules', () => {
+    const game = new Game({ size: 19, rules: sgfRulesMap.GOE, komi: 6.5 });
 
-      strictEqual(game.currentState.whiteCaptures, 1);
-      strictEqual(game.currentState.blackCaptures, 0);
-      strictEqual(game.currentState.position.get(1, 2), Color.Empty);
-      strictEqual(game.currentState.position.get(1, 1), Color.White);
+    game.currentState.position.set(0, 1, Color.White);
+    game.currentState.position.set(0, 2, Color.Black);
+    game.currentState.position.set(1, 0, Color.Black);
+    game.currentState.position.set(1, 1, Color.Black);
 
-      assert(game.isValidMove(1, 2));
-    });
+    game.currentState.player = Color.White;
+    expect(game.isValidMove(0, 0)).toBe(true);
 
-    it('Disallow Triple Ko (repeating of any position) in Chinese rules', () => {
-      const game = new Game({ size: 19, rules: sgfRulesMap.Chinese, komi: 6.5 });
+    game.play(0, 0);
 
-      game.currentState.position.set(0, 1, Color.Black);
-      game.currentState.position.set(1, 0, Color.Black);
-      game.currentState.position.set(2, 1, Color.Black);
-      game.currentState.position.set(0, 2, Color.White);
-      game.currentState.position.set(1, 3, Color.White);
-      game.currentState.position.set(2, 2, Color.White);
-      game.currentState.position.set(1, 2, Color.Black);
+    expect(game.currentState.blackCaptures).toBe(2);
+    expect(game.currentState.whiteCaptures).toBe(0);
+    expect(game.currentState.position.get(0, 0)).toBe(Color.Empty);
+    expect(game.currentState.position.get(0, 1)).toBe(Color.Empty);
+  });
 
-      game.currentState.position.set(3, 1, Color.Black);
-      game.currentState.position.set(4, 0, Color.Black);
-      game.currentState.position.set(5, 1, Color.Black);
-      game.currentState.position.set(3, 2, Color.White);
-      game.currentState.position.set(4, 3, Color.White);
-      game.currentState.position.set(5, 2, Color.White);
-      game.currentState.position.set(4, 1, Color.White);
+  test('Disallow Ko (repeating of previous position)', () => {
+    const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5 });
 
-      game.currentState.position.set(6, 1, Color.Black);
-      game.currentState.position.set(7, 0, Color.Black);
-      game.currentState.position.set(8, 1, Color.Black);
-      game.currentState.position.set(6, 2, Color.White);
-      game.currentState.position.set(7, 3, Color.White);
-      game.currentState.position.set(8, 2, Color.White);
-      game.currentState.position.set(7, 1, Color.White);
+    game.currentState.position.set(0, 1, Color.Black);
+    game.currentState.position.set(1, 0, Color.Black);
+    game.currentState.position.set(2, 1, Color.Black);
+    game.currentState.position.set(0, 2, Color.White);
+    game.currentState.position.set(1, 3, Color.White);
+    game.currentState.position.set(2, 2, Color.White);
 
-      game.play(4, 2); // black captures 2nd ko
-      game.play(1, 1); // white captures 1st ko
-      game.play(7, 2); // black captures 3rd ko
-      game.play(4, 1); // white captures 2nd ko
-      game.play(1, 2); // black captures 1st ko
-      assert(!game.isValidMove(7, 1)); // white captures 3rd ko - invalid
+    game.play(1, 2); // creates KO
+    game.play(1, 1); // white captures
 
-      game.play(5, 5); // ko threat
-      game.play(6, 6); // answer
-      assert(game.isValidMove(7, 1)); // correct
-    });
+    expect(game.currentState.whiteCaptures).toBe(1);
+    expect(game.currentState.blackCaptures).toBe(0);
+    expect(game.currentState.position.get(1, 2)).toBe(Color.Empty);
+    expect(game.currentState.position.get(1, 1)).toBe(Color.White);
 
-    it('Allow Triple Ko (repeating of any position) in Japanese rules', () => {
-      const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5 });
+    expect(game.isValidMove(1, 2)).toBe(false); // invalid capture
 
-      game.currentState.position.set(0, 1, Color.Black);
-      game.currentState.position.set(1, 0, Color.Black);
-      game.currentState.position.set(2, 1, Color.Black);
-      game.currentState.position.set(0, 2, Color.White);
-      game.currentState.position.set(1, 3, Color.White);
-      game.currentState.position.set(2, 2, Color.White);
-      game.currentState.position.set(1, 2, Color.Black);
+    game.play(5, 5); // ko threat
+    game.play(6, 6); // answer
 
-      game.currentState.position.set(3, 1, Color.Black);
-      game.currentState.position.set(4, 0, Color.Black);
-      game.currentState.position.set(5, 1, Color.Black);
-      game.currentState.position.set(3, 2, Color.White);
-      game.currentState.position.set(4, 3, Color.White);
-      game.currentState.position.set(5, 2, Color.White);
-      game.currentState.position.set(4, 1, Color.White);
+    expect(game.isValidMove(1, 2)).toBe(true); // black captures
+  });
 
-      game.currentState.position.set(6, 1, Color.Black);
-      game.currentState.position.set(7, 0, Color.Black);
-      game.currentState.position.set(8, 1, Color.Black);
-      game.currentState.position.set(6, 2, Color.White);
-      game.currentState.position.set(7, 3, Color.White);
-      game.currentState.position.set(8, 2, Color.White);
-      game.currentState.position.set(7, 1, Color.White);
+  test('Allow Ko in no rules', () => {
+    const game = new Game({ size: 19, rules: new NoRules(), komi: 6.5 });
 
-      game.play(4, 2); // black captures 2nd ko
-      game.play(1, 1); // white captures 1st ko
-      game.play(7, 2); // black captures 3rd ko
-      game.play(4, 1); // white captures 2nd ko
-      game.play(1, 2); // black captures 1st ko
-      assert(game.isValidMove(7, 1)); // white captures 3rd ko - valid
-    });
+    game.currentState.position.set(0, 1, Color.Black);
+    game.currentState.position.set(1, 0, Color.Black);
+    game.currentState.position.set(2, 1, Color.Black);
+    game.currentState.position.set(0, 2, Color.White);
+    game.currentState.position.set(1, 3, Color.White);
+    game.currentState.position.set(2, 2, Color.White);
+
+    game.play(1, 2); // creates KO
+    game.play(1, 1); // white captures
+
+    expect(game.currentState.whiteCaptures).toBe(1);
+    expect(game.currentState.blackCaptures).toBe(0);
+    expect(game.currentState.position.get(1, 2)).toBe(Color.Empty);
+    expect(game.currentState.position.get(1, 1)).toBe(Color.White);
+
+    expect(game.isValidMove(1, 2)).toBe(true);
+  });
+
+  test('Disallow Triple Ko (repeating of any position) in Chinese rules', () => {
+    const game = new Game({ size: 19, rules: sgfRulesMap.Chinese, komi: 6.5 });
+
+    game.currentState.position.set(0, 1, Color.Black);
+    game.currentState.position.set(1, 0, Color.Black);
+    game.currentState.position.set(2, 1, Color.Black);
+    game.currentState.position.set(0, 2, Color.White);
+    game.currentState.position.set(1, 3, Color.White);
+    game.currentState.position.set(2, 2, Color.White);
+    game.currentState.position.set(1, 2, Color.Black);
+
+    game.currentState.position.set(3, 1, Color.Black);
+    game.currentState.position.set(4, 0, Color.Black);
+    game.currentState.position.set(5, 1, Color.Black);
+    game.currentState.position.set(3, 2, Color.White);
+    game.currentState.position.set(4, 3, Color.White);
+    game.currentState.position.set(5, 2, Color.White);
+    game.currentState.position.set(4, 1, Color.White);
+
+    game.currentState.position.set(6, 1, Color.Black);
+    game.currentState.position.set(7, 0, Color.Black);
+    game.currentState.position.set(8, 1, Color.Black);
+    game.currentState.position.set(6, 2, Color.White);
+    game.currentState.position.set(7, 3, Color.White);
+    game.currentState.position.set(8, 2, Color.White);
+    game.currentState.position.set(7, 1, Color.White);
+
+    game.play(4, 2); // black captures 2nd ko
+    game.play(1, 1); // white captures 1st ko
+    game.play(7, 2); // black captures 3rd ko
+    game.play(4, 1); // white captures 2nd ko
+    game.play(1, 2); // black captures 1st ko
+    expect(game.isValidMove(7, 1)).toBe(false); // white captures 3rd ko - invalid
+
+    game.play(5, 5); // ko threat
+    game.play(6, 6); // answer
+    expect(game.isValidMove(7, 1)).toBe(true); // correct
+  });
+
+  test('Allow Triple Ko (repeating of any position) in Japanese rules', () => {
+    const game = new Game({ size: 19, rules: sgfRulesMap.Japanese, komi: 6.5 });
+
+    game.currentState.position.set(0, 1, Color.Black);
+    game.currentState.position.set(1, 0, Color.Black);
+    game.currentState.position.set(2, 1, Color.Black);
+    game.currentState.position.set(0, 2, Color.White);
+    game.currentState.position.set(1, 3, Color.White);
+    game.currentState.position.set(2, 2, Color.White);
+    game.currentState.position.set(1, 2, Color.Black);
+
+    game.currentState.position.set(3, 1, Color.Black);
+    game.currentState.position.set(4, 0, Color.Black);
+    game.currentState.position.set(5, 1, Color.Black);
+    game.currentState.position.set(3, 2, Color.White);
+    game.currentState.position.set(4, 3, Color.White);
+    game.currentState.position.set(5, 2, Color.White);
+    game.currentState.position.set(4, 1, Color.White);
+
+    game.currentState.position.set(6, 1, Color.Black);
+    game.currentState.position.set(7, 0, Color.Black);
+    game.currentState.position.set(8, 1, Color.Black);
+    game.currentState.position.set(6, 2, Color.White);
+    game.currentState.position.set(7, 3, Color.White);
+    game.currentState.position.set(8, 2, Color.White);
+    game.currentState.position.set(7, 1, Color.White);
+
+    game.play(4, 2); // black captures 2nd ko
+    game.play(1, 1); // white captures 1st ko
+    game.play(7, 2); // black captures 3rd ko
+    game.play(4, 1); // white captures 2nd ko
+    game.play(1, 2); // black captures 1st ko
+    expect(game.isValidMove(7, 1)).toBe(true); // white captures 3rd ko - valid
   });
 });

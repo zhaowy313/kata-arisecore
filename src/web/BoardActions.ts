@@ -71,7 +71,7 @@ class PlayTool implements BoardTool {
           'x' in child.move &&
           child.move.x === point.x &&
           child.move.y === point.y &&
-          child.move.c === actions.controller.editor.gameState.player,
+          child.move.c === actions.controller.editor.getGameState().player,
       );
 
       if (childWithSameMove) {
@@ -88,7 +88,7 @@ class PlayTool implements BoardTool {
       (!this.previousPoint || point.x !== this.previousPoint.x || point.y !== this.previousPoint.y)
     ) {
       if (actions.controller.editor.isValidMove(point.x, point.y)) {
-        const color = actions.controller.editor.gameState.player === Color.Black ? 'B' : 'W';
+        const color = actions.controller.editor.getGameState().player === Color.Black ? 'B' : 'W';
 
         if (!this.currentHighlight || this.currentHighlight.type !== color) {
           if (this.currentHighlight) {
@@ -121,7 +121,7 @@ class PlayTool implements BoardTool {
 class AddBlackTool implements BoardTool {
   click(point: Point | null, actions: BoardActions): void {
     if (point) {
-      if (actions.controller.editor.gameState.position.get(point.x, point.y) === Color.Black) {
+      if (actions.controller.editor.getGameState().position.get(point.x, point.y) === Color.Black) {
         actions.controller.editor.addSetup({ ...point, c: Color.Empty });
       } else {
         actions.controller.editor.addSetup({ ...point, c: Color.Black });
@@ -133,7 +133,7 @@ class AddBlackTool implements BoardTool {
 class AddWhiteTool implements BoardTool {
   click(point: Point | null, actions: BoardActions): void {
     if (point) {
-      if (actions.controller.editor.gameState.position.get(point.x, point.y) === Color.White) {
+      if (actions.controller.editor.getGameState().position.get(point.x, point.y) === Color.White) {
         actions.controller.editor.addSetup({ ...point, c: Color.Empty });
       } else {
         actions.controller.editor.addSetup({ ...point, c: Color.White });

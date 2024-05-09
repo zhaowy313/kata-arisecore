@@ -259,6 +259,7 @@ export class KifuNode extends SGFPropertiesBag {
   static fromJS(node: Partial<KifuNode>) {
     const kifuNode = new KifuNode();
     Object.assign(kifuNode, node);
+    kifuNode.children = kifuNode.children.map(KifuNode.fromJS);
     return kifuNode;
   }
 

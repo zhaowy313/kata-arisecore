@@ -3,7 +3,7 @@ import { BoardPosition } from './BoardPosition';
 
 export interface GameStateProperties {
   boardSection?: Readonly<Vector>;
-  dim?: readonly Vector[];
+  dim?: ReadonlyArray<Vector>;
 }
 
 /**

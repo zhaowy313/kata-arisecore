@@ -1,306 +1,305 @@
-import { strict as assert, deepStrictEqual, notStrictEqual, strictEqual, throws } from 'assert';
 import { BoardPosition } from '../src/game';
 import { Color } from '../src/types';
+import { describe, test, expect } from 'vitest';
 
-describe('BoardPosition object', () => {
-  describe('New position', () => {
-    it('Creates default empty position (19x19)', () => {
-      const position = new BoardPosition();
+describe('New position', () => {
+  test('Creates default empty position (19x19)', () => {
+    const position = new BoardPosition();
 
-      strictEqual(position.cols, 19);
-      strictEqual(position.rows, 19);
+    expect(position.cols).toBe(19);
+    expect(position.rows).toBe(19);
 
-      assert(position.has(18, 18));
-      assert(!position.has(18, 19));
-      assert(!position.has(19, 18));
+    expect(position.has(18, 18)).toBe(true);
+    expect(position.has(18, 19)).toBe(false);
+    expect(position.has(19, 18)).toBe(false);
 
-      assert(position.has(0, 0));
-      assert(!position.has(0, -1));
-      assert(!position.has(-1, 0));
-    });
-
-    it('Creates custom square position', () => {
-      const position = new BoardPosition(9);
-
-      strictEqual(position.cols, 9);
-      strictEqual(position.rows, 9);
-
-      assert(position.has(8, 8));
-      assert(!position.has(8, 9));
-      assert(!position.has(9, 8));
-    });
-
-    it('Creates custom rectangular position', () => {
-      const position = new BoardPosition(9, 19);
-
-      strictEqual(position.cols, 9);
-      strictEqual(position.rows, 19);
-
-      assert(position.has(8, 18));
-      assert(!position.has(8, 19));
-      assert(!position.has(9, 18));
-    });
+    expect(position.has(0, 0)).toBe(true);
+    expect(position.has(0, -1)).toBe(false);
+    expect(position.has(-1, 0)).toBe(false);
   });
 
-  describe('BoardPosition#get() & BoardPosition#set()', () => {
-    it('Basic getting and setting fields/stones', () => {
-      const position = new BoardPosition(9);
+  test('Creates custom square position', () => {
+    const position = new BoardPosition(9);
 
-      strictEqual(position.get(0, 0), Color.Empty);
-      strictEqual(position.get(0, 1), Color.Empty);
-      strictEqual(position.get(1, 0), Color.Empty);
-      strictEqual(position.get(1, 1), Color.Empty);
+    expect(position.cols).toBe(9);
+    expect(position.rows).toBe(9);
 
-      position.set(0, 0, Color.Black);
-      position.set(0, 1, Color.Black);
-      position.set(1, 0, Color.White);
-      position.set(1, 1, Color.White);
-
-      strictEqual(position.get(0, 0), Color.Black);
-      strictEqual(position.get(0, 1), Color.Black);
-      strictEqual(position.get(1, 0), Color.White);
-      strictEqual(position.get(1, 1), Color.White);
-
-      position.set(0, 0, Color.Empty);
-      position.set(0, 1, Color.White);
-      position.set(1, 0, Color.Black);
-      position.set(1, 1, Color.Empty);
-
-      strictEqual(position.get(0, 0), Color.Empty);
-      strictEqual(position.get(0, 1), Color.White);
-      strictEqual(position.get(1, 0), Color.Black);
-      strictEqual(position.get(1, 1), Color.Empty);
-    });
-
-    it('Returns undefined/null when accessing field outside of the position.', () => {
-      const position = new BoardPosition(9);
-
-      assert(position.get(0, -1) == null);
-      assert(position.get(-1, 0) == null);
-      assert(position.get(0, 9) == null);
-      assert(position.get(9, 0) == null);
-    });
-
-    it('Throws error, when setting field outside of the position.', () => {
-      const position = new BoardPosition(9);
-
-      throws(() => {
-        position.set(0, -1, Color.White);
-      });
-      throws(() => {
-        position.set(-1, 0, Color.Black);
-      });
-      throws(() => {
-        position.set(0, 9, Color.Empty);
-      });
-      throws(() => {
-        position.set(9, 0, Color.White);
-      });
-    });
+    expect(position.has(8, 8)).toBe(true);
+    expect(position.has(8, 9)).toBe(false);
+    expect(position.has(9, 8)).toBe(false);
   });
 
-  describe('BoardPosition#clone()', () => {
-    it('Clones empty position', () => {
-      const position = new BoardPosition(9);
-      const cloned = position.clone();
-      notStrictEqual(position, cloned);
-      deepStrictEqual(position, cloned);
-    });
+  test('Creates custom rectangular position', () => {
+    const position = new BoardPosition(9, 19);
 
-    it('Clones position with all moves', () => {
-      const position = new BoardPosition(3);
+    expect(position.cols).toBe(9);
+    expect(position.rows).toBe(19);
 
-      position.set(0, 0, Color.Black);
-      position.set(0, 1, Color.White);
-      position.set(1, 1, Color.Black);
-      position.set(1, 2, Color.White);
-      position.set(2, 0, Color.White);
-      position.set(2, 2, Color.Black);
+    expect(position.has(8, 18)).toBe(true);
+    expect(position.has(8, 19)).toBe(false);
+    expect(position.has(9, 18)).toBe(false);
+  });
+});
 
-      const cloned = position.clone();
+describe('BoardPosition#get() & BoardPosition#set()', () => {
+  test('Basic getting and setting fields/stones', () => {
+    const position = new BoardPosition(9);
 
-      deepStrictEqual(position, cloned);
+    expect(position.get(0, 0)).toBe(Color.Empty);
+    expect(position.get(0, 1)).toBe(Color.Empty);
+    expect(position.get(1, 0)).toBe(Color.Empty);
+    expect(position.get(1, 1)).toBe(Color.Empty);
 
-      cloned.set(0, 0, Color.White);
-      strictEqual(cloned.get(0, 0), Color.White);
-      strictEqual(position.get(0, 0), Color.Black);
-    });
+    position.set(0, 0, Color.Black);
+    position.set(0, 1, Color.Black);
+    position.set(1, 0, Color.White);
+    position.set(1, 1, Color.White);
+
+    expect(position.get(0, 0)).toBe(Color.Black);
+    expect(position.get(0, 1)).toBe(Color.Black);
+    expect(position.get(1, 0)).toBe(Color.White);
+    expect(position.get(1, 1)).toBe(Color.White);
+
+    position.set(0, 0, Color.Empty);
+    position.set(0, 1, Color.White);
+    position.set(1, 0, Color.Black);
+    position.set(1, 1, Color.Empty);
+
+    expect(position.get(0, 0)).toBe(Color.Empty);
+    expect(position.get(0, 1)).toBe(Color.White);
+    expect(position.get(1, 0)).toBe(Color.Black);
+    expect(position.get(1, 1)).toBe(Color.Empty);
   });
 
-  describe('BoardPosition#compare()', () => {
-    it('Cloned positions are the same', () => {
-      const position = new BoardPosition(19);
-      position.set(10, 10, Color.Black);
-      assert(position.equals(position.clone()));
-    });
+  test('Returns undefined/null when accessing field outside of the position.', () => {
+    const position = new BoardPosition(9);
 
-    it('Different positions are not the same', () => {
-      const position = new BoardPosition(3);
-      position.set(0, 0, Color.Black);
-
-      const cloned = position.clone();
-      cloned.set(1, 0, Color.Black);
-
-      assert(!position.equals(cloned));
-    });
-
-    it('Different sizes are not the same', () => {
-      const position = new BoardPosition(19);
-      const position2 = new BoardPosition(13);
-
-      assert(!position.equals(position2));
-    });
+    expect(position.get(0, -1)).toBeUndefined();
+    expect(position.get(-1, 0)).toBeUndefined();
+    expect(position.get(0, 9)).toBeUndefined();
+    expect(position.get(9, 0)).toBeUndefined();
   });
 
-  describe('BoardPosition#hasLiberties()', () => {
-    it('One lonely stone has liberties', () => {
-      const position = new BoardPosition(9);
-      position.set(0, 0, Color.Black);
-      position.set(0, 8, Color.White);
-      position.set(8, 0, Color.Black);
-      position.set(8, 8, Color.White);
-      position.set(4, 4, Color.Black);
+  test('Throws error, when setting field outside of the position.', () => {
+    const position = new BoardPosition(9);
 
-      assert(position.hasLiberties(0, 0));
-      assert(position.hasLiberties(0, 8));
-      assert(position.hasLiberties(8, 0));
-      assert(position.hasLiberties(8, 8));
-      assert(position.hasLiberties(4, 4));
-    });
+    expect(() => {
+      position.set(0, -1, Color.White);
+    }).toThrow();
+    expect(() => {
+      position.set(-1, 0, Color.Black);
+    }).toThrow();
+    expect(() => {
+      position.set(0, 9, Color.Empty);
+    }).toThrow();
+    expect(() => {
+      position.set(9, 0, Color.White);
+    }).toThrow();
+  });
+});
 
-    it("Surrounded stone doesn't have liberties", () => {
-      const position = new BoardPosition(9);
-      position.set(0, 0, Color.Black);
-      position.set(1, 0, Color.White);
-      position.set(0, 1, Color.White);
+describe('BoardPosition#clone()', () => {
+  test('Clones empty position', () => {
+    const position = new BoardPosition(9);
+    const cloned = position.clone();
 
-      position.set(0, 8, Color.White);
-      position.set(1, 8, Color.Black);
-      position.set(0, 7, Color.Black);
-
-      position.set(8, 0, Color.Black);
-      position.set(8, 1, Color.White);
-      position.set(7, 0, Color.White);
-
-      position.set(8, 8, Color.White);
-      position.set(7, 8, Color.Black);
-      position.set(8, 7, Color.Black);
-
-      position.set(4, 4, Color.Black);
-      position.set(3, 4, Color.White);
-      position.set(5, 4, Color.White);
-      position.set(4, 3, Color.White);
-      position.set(4, 5, Color.White);
-
-      assert(!position.hasLiberties(0, 0));
-      assert(!position.hasLiberties(0, 8));
-      assert(!position.hasLiberties(8, 0));
-      assert(!position.hasLiberties(8, 8));
-      assert(!position.hasLiberties(4, 4));
-    });
-
-    it('Group of stones with liberty', () => {
-      const position = new BoardPosition(9, 13);
-      position.set(0, 0, Color.Black);
-      position.set(0, 1, Color.Black);
-      position.set(0, 2, Color.Black);
-      position.set(1, 2, Color.Black);
-      position.set(2, 2, Color.Black);
-
-      position.set(1, 1, Color.White);
-      position.set(2, 1, Color.White);
-      position.set(3, 2, Color.White);
-      position.set(2, 3, Color.White);
-      position.set(1, 3, Color.White);
-      position.set(0, 3, Color.White);
-
-      assert(position.hasLiberties(2, 2));
-    });
-
-    it('Group of stones without liberty', () => {
-      const position = new BoardPosition(9);
-      position.set(0, 0, Color.Black);
-      position.set(0, 1, Color.Black);
-      position.set(0, 2, Color.Black);
-      position.set(1, 2, Color.Black);
-      position.set(2, 2, Color.Black);
-
-      position.set(1, 0, Color.White);
-      position.set(1, 1, Color.White);
-      position.set(2, 1, Color.White);
-      position.set(3, 2, Color.White);
-      position.set(2, 3, Color.White);
-      position.set(1, 3, Color.White);
-      position.set(0, 3, Color.White);
-
-      assert(!position.hasLiberties(2, 2));
-    });
+    expect(position).not.toBe(cloned);
+    expect(position).toEqual(cloned);
   });
 
-  describe('BoardPosition#removeChain()', () => {
-    it('Test removing of all stones', () => {
-      const position = new BoardPosition(3);
+  test('Clones position with all moves', () => {
+    const position = new BoardPosition(3);
 
-      position.set(0, 0, Color.Black);
-      position.set(0, 1, Color.Black);
-      position.set(0, 2, Color.Black);
-      position.set(1, 0, Color.Black);
-      position.set(1, 1, Color.Black);
-      position.set(1, 2, Color.Black);
-      position.set(2, 0, Color.Black);
-      position.set(2, 1, Color.Black);
-      position.set(2, 2, Color.Black);
+    position.set(0, 0, Color.Black);
+    position.set(0, 1, Color.White);
+    position.set(1, 1, Color.Black);
+    position.set(1, 2, Color.White);
+    position.set(2, 0, Color.White);
+    position.set(2, 2, Color.Black);
 
-      strictEqual(position.removeChain(1, 1), 9);
+    const cloned = position.clone();
 
-      strictEqual(position.get(0, 0), Color.Empty);
-      strictEqual(position.get(0, 1), Color.Empty);
-      strictEqual(position.get(0, 2), Color.Empty);
-      strictEqual(position.get(1, 0), Color.Empty);
-      strictEqual(position.get(1, 1), Color.Empty);
-      strictEqual(position.get(1, 2), Color.Empty);
-      strictEqual(position.get(2, 0), Color.Empty);
-      strictEqual(position.get(2, 1), Color.Empty);
-      strictEqual(position.get(2, 2), Color.Empty);
-    });
+    expect(position).toEqual(cloned);
 
-    it('Group of stones is correctly captured', () => {
-      const position = new BoardPosition(9);
-      position.set(0, 0, Color.Black);
-      position.set(0, 1, Color.Black);
-      position.set(0, 2, Color.Black);
-      position.set(1, 2, Color.Black);
-      position.set(2, 2, Color.Black);
+    cloned.set(0, 0, Color.White);
+    expect(cloned.get(0, 0)).toBe(Color.White);
+    expect(position.get(0, 0)).toBe(Color.Black);
+  });
+});
 
-      position.set(2, 0, Color.Black);
-      position.set(3, 1, Color.Black);
-      position.set(3, 3, Color.Black);
+describe('BoardPosition#compare()', () => {
+  test('Cloned positions are the same', () => {
+    const position = new BoardPosition(19);
+    position.set(10, 10, Color.Black);
+    expect(position.equals(position.clone())).toBe(true);
+  });
 
-      position.set(1, 1, Color.White);
-      position.set(2, 1, Color.White);
-      position.set(3, 2, Color.White);
-      position.set(2, 3, Color.White);
-      position.set(1, 3, Color.White);
-      position.set(0, 3, Color.White);
+  test('Different positions are not the same', () => {
+    const position = new BoardPosition(3);
+    position.set(0, 0, Color.Black);
 
-      strictEqual(position.removeChain(2, 2), 5);
+    const cloned = position.clone();
+    cloned.set(1, 0, Color.Black);
 
-      strictEqual(position.get(0, 0), Color.Empty);
-      strictEqual(position.get(0, 1), Color.Empty);
-      strictEqual(position.get(0, 2), Color.Empty);
-      strictEqual(position.get(1, 2), Color.Empty);
-      strictEqual(position.get(2, 2), Color.Empty);
+    expect(position.equals(cloned)).toBe(false);
+  });
 
-      strictEqual(position.get(2, 0), Color.Black);
-      strictEqual(position.get(3, 1), Color.Black);
-      strictEqual(position.get(3, 3), Color.Black);
+  test('Different sizes are not the same', () => {
+    const position = new BoardPosition(19);
+    const position2 = new BoardPosition(13);
 
-      strictEqual(position.get(1, 1), Color.White);
-      strictEqual(position.get(2, 1), Color.White);
-      strictEqual(position.get(3, 2), Color.White);
-      strictEqual(position.get(2, 3), Color.White);
-      strictEqual(position.get(1, 3), Color.White);
-      strictEqual(position.get(0, 3), Color.White);
-    });
+    expect(position.equals(position2)).toBe(false);
+  });
+});
+
+describe('BoardPosition#hasLiberties()', () => {
+  test('One lonely stone has liberties', () => {
+    const position = new BoardPosition(9);
+    position.set(0, 0, Color.Black);
+    position.set(0, 8, Color.White);
+    position.set(8, 0, Color.Black);
+    position.set(8, 8, Color.White);
+    position.set(4, 4, Color.Black);
+
+    expect(position.hasLiberties(0, 0)).toBe(true);
+    expect(position.hasLiberties(0, 8)).toBe(true);
+    expect(position.hasLiberties(8, 0)).toBe(true);
+    expect(position.hasLiberties(8, 8)).toBe(true);
+    expect(position.hasLiberties(4, 4)).toBe(true);
+  });
+
+  test("Surrounded stone doesn't have liberties", () => {
+    const position = new BoardPosition(9);
+    position.set(0, 0, Color.Black);
+    position.set(1, 0, Color.White);
+    position.set(0, 1, Color.White);
+
+    position.set(0, 8, Color.White);
+    position.set(1, 8, Color.Black);
+    position.set(0, 7, Color.Black);
+
+    position.set(8, 0, Color.Black);
+    position.set(8, 1, Color.White);
+    position.set(7, 0, Color.White);
+
+    position.set(8, 8, Color.White);
+    position.set(7, 8, Color.Black);
+    position.set(8, 7, Color.Black);
+
+    position.set(4, 4, Color.Black);
+    position.set(3, 4, Color.White);
+    position.set(5, 4, Color.White);
+    position.set(4, 3, Color.White);
+    position.set(4, 5, Color.White);
+
+    expect(position.hasLiberties(0, 0)).toBe(false);
+    expect(position.hasLiberties(0, 8)).toBe(false);
+    expect(position.hasLiberties(8, 0)).toBe(false);
+    expect(position.hasLiberties(8, 8)).toBe(false);
+    expect(position.hasLiberties(4, 4)).toBe(false);
+  });
+
+  test('Group of stones with liberty', () => {
+    const position = new BoardPosition(9, 13);
+    position.set(0, 0, Color.Black);
+    position.set(0, 1, Color.Black);
+    position.set(0, 2, Color.Black);
+    position.set(1, 2, Color.Black);
+    position.set(2, 2, Color.Black);
+
+    position.set(1, 1, Color.White);
+    position.set(2, 1, Color.White);
+    position.set(3, 2, Color.White);
+    position.set(2, 3, Color.White);
+    position.set(1, 3, Color.White);
+    position.set(0, 3, Color.White);
+
+    expect(position.hasLiberties(2, 2)).toBe(true);
+  });
+
+  test('Group of stones without liberty', () => {
+    const position = new BoardPosition(9);
+    position.set(0, 0, Color.Black);
+    position.set(0, 1, Color.Black);
+    position.set(0, 2, Color.Black);
+    position.set(1, 2, Color.Black);
+    position.set(2, 2, Color.Black);
+
+    position.set(1, 0, Color.White);
+    position.set(1, 1, Color.White);
+    position.set(2, 1, Color.White);
+    position.set(3, 2, Color.White);
+    position.set(2, 3, Color.White);
+    position.set(1, 3, Color.White);
+    position.set(0, 3, Color.White);
+
+    expect(position.hasLiberties(2, 2)).toBe(false);
+  });
+});
+
+describe('BoardPosition#removeChain()', () => {
+  test('Test removing of all stones', () => {
+    const position = new BoardPosition(3);
+
+    position.set(0, 0, Color.Black);
+    position.set(0, 1, Color.Black);
+    position.set(0, 2, Color.Black);
+    position.set(1, 0, Color.Black);
+    position.set(1, 1, Color.Black);
+    position.set(1, 2, Color.Black);
+    position.set(2, 0, Color.Black);
+    position.set(2, 1, Color.Black);
+    position.set(2, 2, Color.Black);
+
+    expect(position.removeChain(1, 1)).toBe(9);
+
+    expect(position.get(0, 0)).toBe(Color.Empty);
+    expect(position.get(0, 1)).toBe(Color.Empty);
+    expect(position.get(0, 2)).toBe(Color.Empty);
+    expect(position.get(1, 0)).toBe(Color.Empty);
+    expect(position.get(1, 1)).toBe(Color.Empty);
+    expect(position.get(1, 2)).toBe(Color.Empty);
+    expect(position.get(2, 0)).toBe(Color.Empty);
+    expect(position.get(2, 1)).toBe(Color.Empty);
+    expect(position.get(2, 2)).toBe(Color.Empty);
+  });
+
+  test('Group of stones is correctly captured', () => {
+    const position = new BoardPosition(9);
+    position.set(0, 0, Color.Black);
+    position.set(0, 1, Color.Black);
+    position.set(0, 2, Color.Black);
+    position.set(1, 2, Color.Black);
+    position.set(2, 2, Color.Black);
+
+    position.set(2, 0, Color.Black);
+    position.set(3, 1, Color.Black);
+    position.set(3, 3, Color.Black);
+
+    position.set(1, 1, Color.White);
+    position.set(2, 1, Color.White);
+    position.set(3, 2, Color.White);
+    position.set(2, 3, Color.White);
+    position.set(1, 3, Color.White);
+    position.set(0, 3, Color.White);
+
+    expect(position.removeChain(2, 2)).toBe(5);
+
+    expect(position.get(0, 0)).toBe(Color.Empty);
+    expect(position.get(0, 1)).toBe(Color.Empty);
+    expect(position.get(0, 2)).toBe(Color.Empty);
+    expect(position.get(1, 2)).toBe(Color.Empty);
+    expect(position.get(2, 2)).toBe(Color.Empty);
+
+    expect(position.get(2, 0)).toBe(Color.Black);
+    expect(position.get(3, 1)).toBe(Color.Black);
+    expect(position.get(3, 3)).toBe(Color.Black);
+
+    expect(position.get(1, 1)).toBe(Color.White);
+    expect(position.get(2, 1)).toBe(Color.White);
+    expect(position.get(3, 2)).toBe(Color.White);
+    expect(position.get(2, 3)).toBe(Color.White);
+    expect(position.get(1, 3)).toBe(Color.White);
+    expect(position.get(0, 3)).toBe(Color.White);
   });
 });

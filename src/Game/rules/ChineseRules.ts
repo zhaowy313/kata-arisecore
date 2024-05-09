@@ -7,7 +7,7 @@ import { Rules, RulesContext } from './Rules';
  *
  * @see https://senseis.xmp.net/?PositionalSuperko
  */
-export class ChinesRules implements Rules {
+export class ChineseRules implements Rules {
   constructor(public readonly name = 'Chinese') {}
 
   isValidMove(

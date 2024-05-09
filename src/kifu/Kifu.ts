@@ -1,6 +1,7 @@
 import { SGFGameTree, SGFParser } from '../sgf';
 import { KifuInfo } from './KifuInfo';
 import { KifuNode } from './KifuNode';
+import { deepClone } from '../utils/deepClone';
 
 /**
  * Object describing position of kifu node in kifu tree. When kifu changes, kifu paths must be
@@ -149,7 +150,7 @@ export class Kifu {
    * Deeply clones this kifu.
    */
   clone(): Kifu {
-    return Kifu.fromJS(JSON.parse(JSON.stringify(this.toJS())));
+    return Kifu.fromJS(deepClone(this));
   }
 
   #bfs(

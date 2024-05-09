@@ -1,134 +1,129 @@
-import { deepEqual, throws } from 'assert';
 import { SGFSyntaxError, SGFParser } from '../src/sgf';
+import { describe, test, expect } from 'vitest';
 
 describe('SGFParser', () => {
   const parser = new SGFParser();
 
-  describe('Parsing properties - parseProperties()', () => {});
+  // describe('Parsing properties - parseProperties()', () => {});
 
   describe('Parsing nodes - parseNode()', () => {
-    it('Parsing empty value', () => {
-      deepEqual(parser.parseNode(';DM[]'), { DM: [''] });
+    test('Parsing empty value', () => {
+      expect(parser.parseNode(';DM[]')).toEqual({ DM: [''] });
     });
 
-    it('Parsing single value', () => {
-      deepEqual(parser.parseNode(';B[aa]'), { B: ['aa'] });
+    test('Parsing single value', () => {
+      expect(parser.parseNode(';B[aa]')).toEqual({ B: ['aa'] });
     });
 
-    it('Parsing multiple values', () => {
-      deepEqual(parser.parseNode(';AB[aa][bb][cc]'), { AB: ['aa', 'bb', 'cc'] });
+    test('Parsing multiple values', () => {
+      expect(parser.parseNode(';AB[aa][bb][cc]')).toEqual({ AB: ['aa', 'bb', 'cc'] });
     });
 
-    it('Parsing special characters', () => {
-      deepEqual(parser.parseNode(';C[SGF property:\nC\\[\\\\\\]]'), {
+    test('Parsing special characters', () => {
+      expect(parser.parseNode(';C[SGF property:\nC\\[\\\\\\]]')).toEqual({
         C: ['SGF property:\nC[\\]'],
       });
     });
 
-    it('Parsing multiple properties', () => {
-      deepEqual(parser.parseNode(';W[aa]C[foo bar]SQ[ab][ba]'), {
+    test('Parsing multiple properties', () => {
+      expect(parser.parseNode(';W[aa]C[foo bar]SQ[ab][ba]')).toEqual({
         W: ['aa'],
         C: ['foo bar'],
         SQ: ['ab', 'ba'],
       });
     });
 
-    it('Correctly ignoring whitespace characters', () => {
-      deepEqual(parser.parseNode(' ; \nB [aa] TR\n[ab]\n[ba]'), { B: ['aa'], TR: ['ab', 'ba'] });
+    test('Correctly ignoring whitespace characters', () => {
+      expect(parser.parseNode(' ; \nB [aa] TR\n[ab]\n[ba]')).toEqual({
+        B: ['aa'],
+        TR: ['ab', 'ba'],
+      });
     });
 
-    // TODO: not sure how to do it
-    /*it('Throws error when prop ident is invalid', () => {
-      const parser = new SGFParser(';w[aa]');
-      // TODO: throws exact error object
-      throws(() => parser.parseNode(), SGFSyntaxError);
-    });*/
-
-    it('Throws error when value is missing', () => {
-      // TODO: throws exact error object
-      throws(() => parser.parseNode(';W'), SGFSyntaxError);
+    test('Throws error when value is missing', () => {
+      expect(() => parser.parseNode(';W')).toThrow(SGFSyntaxError);
     });
 
-    it('Throws error when closing bracket is missing', () => {
-      // TODO: throws exact error object
-      throws(() => parser.parseNode(';B[aa'), SGFSyntaxError);
+    test('Throws error when closing bracket is missing', () => {
+      expect(() => parser.parseNode(';B[aa')).toThrow(SGFSyntaxError);
     });
 
-    it('Correctly parses a node', () => {
-      deepEqual(parser.parseNode(';AB[aa]AW[bb][cc]'), { AB: ['aa'], AW: ['bb', 'cc'] });
+    test('Correctly parses a node', () => {
+      expect(parser.parseNode(';AB[aa]AW[bb][cc]')).toEqual({ AB: ['aa'], AW: ['bb', 'cc'] });
     });
 
-    it('Correctly parses an empty node', () => {
-      deepEqual(parser.parseNode(';'), {});
+    test('Correctly parses an empty node', () => {
+      expect(parser.parseNode(';')).toEqual({});
     });
 
-    it("Throws error when node isn't starting with `;`.", () => {
-      // TODO: throws exact error object
-      throws(() => parser.parseNode('B[aa]'), SGFSyntaxError);
+    test("Throws error when node isn't starting with `;`.", () => {
+      expect(() => parser.parseNode('B[aa]')).toThrow(SGFSyntaxError);
     });
   });
 
   describe('Parsing node sequence - parseSequence()', () => {
-    it('Correctly parses a node sequence', () => {
-      deepEqual(parser.parseSequence(';DT[2100-12-01]KM[7.5];B[aa];W[bb]'), [
+    test('Correctly parses a node sequence', () => {
+      expect(parser.parseSequence(';DT[2100-12-01]KM[7.5];B[aa];W[bb]')).toEqual([
         { DT: ['2100-12-01'], KM: ['7.5'] },
         { B: ['aa'] },
         { W: ['bb'] },
       ]);
     });
 
-    it('Correctly ignoring whitespace characters', () => {
-      deepEqual(parser.parseSequence('; B[aa] ; ;\nW[bb]'), [{ B: ['aa'] }, {}, { W: ['bb'] }]);
+    test('Correctly ignoring whitespace characters', () => {
+      expect(parser.parseSequence('; B[aa] ; ;\nW[bb]')).toEqual([
+        { B: ['aa'] },
+        {},
+        { W: ['bb'] },
+      ]);
     });
   });
 
   describe('Parsing a game tree - parseGameTree()', () => {
-    it('Correctly parses simple game tree without children', () => {
-      deepEqual(parser.parseGameTree('(;DT[2100-12-01]KM[7.5];B[aa];W[bb])'), {
+    test('Correctly parses simple game tree without children', () => {
+      expect(parser.parseGameTree('(;DT[2100-12-01]KM[7.5];B[aa];W[bb])')).toEqual({
         sequence: [{ DT: ['2100-12-01'], KM: ['7.5'] }, { B: ['aa'] }, { W: ['bb'] }],
         children: [],
       });
     });
 
-    it('Correctly parses game tree with children', () => {
-      deepEqual(
+    test('Correctly parses game tree with children', () => {
+      expect(
         parser.parseGameTree(
           '(;DT[2100-12-01]KM[7.5](;B[aa];W[bb](;B[ee])(;B[ff]))(;B[cc];W[dd]))',
         ),
-        {
-          sequence: [{ DT: ['2100-12-01'], KM: ['7.5'] }],
-          children: [
-            {
-              sequence: [{ B: ['aa'] }, { W: ['bb'] }],
-              children: [
-                {
-                  sequence: [{ B: ['ee'] }],
-                  children: [],
-                },
-                {
-                  sequence: [{ B: ['ff'] }],
-                  children: [],
-                },
-              ],
-            },
-            {
-              sequence: [{ B: ['cc'] }, { W: ['dd'] }],
-              children: [],
-            },
-          ],
-        },
-      );
+      ).toEqual({
+        sequence: [{ DT: ['2100-12-01'], KM: ['7.5'] }],
+        children: [
+          {
+            sequence: [{ B: ['aa'] }, { W: ['bb'] }],
+            children: [
+              {
+                sequence: [{ B: ['ee'] }],
+                children: [],
+              },
+              {
+                sequence: [{ B: ['ff'] }],
+                children: [],
+              },
+            ],
+          },
+          {
+            sequence: [{ B: ['cc'] }, { W: ['dd'] }],
+            children: [],
+          },
+        ],
+      });
     });
 
-    it("Throws error when game tree isn' closed.", () => {
-      // TODO: throws exact error object
-      throws(() => parser.parseGameTree('(;B[aa](;W[ee](;W[ff]))'));
+    test("Throws error when game tree isn' closed.", () => {
+      expect(() => parser.parseGameTree('(;B[aa](;W[ee](;W[ff]))')).toThrow(SGFSyntaxError);
     });
   });
 
   describe('Parsing a SGF - parseCollection()', () => {
-    it('Correctly parses SGF.', () => {
-      deepEqual(parser.parseCollection('(;DT[2100-12-01](;B[aa])(;B[bb]))(;KM[7.5])'), [
+    test('Correctly parses SGF.', () => {
+      expect(parser.parseCollection('(;DT[2100-12-01](;B[aa])(;B[bb]))(;KM[7.5])')).toEqual([
         {
           sequence: [{ DT: ['2100-12-01'] }],
           children: [
@@ -149,9 +144,8 @@ describe('SGFParser', () => {
       ]);
     });
 
-    it('Throws error when there is no game tree.', () => {
-      // TODO: throws exact error object
-      throws(() => parser.parseCollection(';B[aa]'), SGFSyntaxError);
+    test('Throws error when there is no game tree.', () => {
+      expect(() => parser.parseCollection(';B[aa]')).toThrow(SGFSyntaxError);
     });
   });
 });

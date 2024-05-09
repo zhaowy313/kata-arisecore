@@ -102,67 +102,9 @@ export default class SVGBoard extends BoardBase {
       this.svgElement.style.backgroundImage = '';
     }
 
-    this.drawGrid();
-    this.drawCoordinates();
-    this.drawObjects();
-  }
-
-  drawGrid() {
-    if (this.contexts[SVG_GRID_MASK]) {
-      this.svgElement.removeChild(this.contexts[SVG_GRID_MASK]);
-    }
-
-    if (this.contexts.gridElement) {
-      this.svgElement.removeChild(this.contexts.gridElement);
-    }
-
-    // create grid mask
-    const size = this.getSize();
-    this.contexts[SVG_GRID_MASK] = document.createElementNS(SVG_NS, 'mask');
-    this.contexts[SVG_GRID_MASK].id = generateId('mask');
-    this.contexts[
-      SVG_GRID_MASK
-    ].innerHTML = `<rect x="-0.5" y="-0.5" width="${size.x}" height="${size.y}" fill="white" />`;
-    this.svgElement.appendChild(this.contexts[SVG_GRID_MASK]);
-
-    // create grid
-    this.contexts.gridElement = createGrid(this);
-    this.contexts.gridElement.setAttribute('mask', `url(#${this.contexts[SVG_GRID_MASK].id})`);
-    this.svgElement.appendChild(this.contexts.gridElement);
-  }
-
-  drawCoordinates() {
-    if (this.contexts.coordinatesElement) {
-      this.svgElement.removeChild(this.contexts.coordinatesElement);
-    }
-
-    this.contexts.coordinatesElement = createCoordinates(this);
-    this.contexts.coordinatesElement.style.opacity = this.config.coordinates ? '' : '0';
-    this.svgElement.appendChild(this.contexts.coordinatesElement);
-  }
-
-  drawObjects() {
-    // remove old shadows layer
-    if (this.contexts[SVG_SHADOWS]) {
-      this.svgElement.removeChild(this.contexts[SVG_SHADOWS]);
-    }
-
-    // remove old objects layer
-    if (this.contexts[SVG_OBJECTS]) {
-      this.svgElement.removeChild(this.contexts[SVG_OBJECTS]);
-    }
-
-    // append new shadows layer
-    this.contexts[SVG_SHADOWS] = document.createElementNS(SVG_NS, 'g');
-    this.svgElement.appendChild(this.contexts[SVG_SHADOWS]);
-
-    // append new object layer
-    this.contexts[SVG_OBJECTS] = document.createElementNS(SVG_NS, 'g');
-    this.svgElement.appendChild(this.contexts[SVG_OBJECTS]);
-
-    // prepare map for objects and add all objects
-    this.objectsElementMap = new Map();
-    this.objects.forEach((boardObject) => this.createObjectElements(boardObject));
+    this.#drawGrid();
+    this.#drawCoordinates();
+    this.#drawObjects();
   }
 
   addObject(boardObject: SVGBoardObject | SVGBoardObject[]) {
@@ -175,34 +117,8 @@ export default class SVGBoard extends BoardBase {
         return;
       }
 
-      this.createObjectElements(boardObject);
+      this.#createObjectElements(boardObject);
     }
-  }
-
-  protected createObjectElements(boardObject: SVGBoardObject) {
-    const handler = this.getObjectHandler(boardObject);
-
-    // create element or elements and add them to the svg
-    const elem = handler.createElement(this.config, (def: SVGElement) =>
-      this.defsElement.appendChild(def),
-    );
-    let elements: BoardObjectSVGElements;
-
-    if (elem instanceof SVGElement) {
-      elements = { [SVG_OBJECTS]: elem };
-    } else {
-      elements = elem;
-    }
-    this.objectsElementMap.set(boardObject, elements);
-    Object.keys(elements).forEach((key) => this.contexts[key].appendChild(elements[key]));
-
-    handler.updateElement(elements, boardObject, this.config);
-  }
-
-  getObjectHandler(boardObject: SVGBoardObject) {
-    return 'handler' in boardObject
-      ? boardObject.handler
-      : this.config.theme.drawHandlers[boardObject.type];
   }
 
   removeObject(boardObject: SVGBoardObject | SVGBoardObject[]) {
@@ -233,7 +149,7 @@ export default class SVGBoard extends BoardBase {
       return;
     }
 
-    const handler = this.getObjectHandler(boardObject);
+    const handler = this.#getObjectHandler(boardObject);
     handler.updateElement(elements, boardObject, this.config);
   }
 
@@ -295,5 +211,89 @@ export default class SVGBoard extends BoardBase {
     super.setCoordinates(coordinates);
     this.contexts.coordinatesElement.style.opacity = this.config.coordinates ? '' : '0';
     this.setViewport();
+  }
+
+  #createObjectElements(boardObject: SVGBoardObject) {
+    const handler = this.#getObjectHandler(boardObject);
+
+    // create element or elements and add them to the svg
+    const elem = handler.createElement(this.config, (def: SVGElement) =>
+      this.defsElement.appendChild(def),
+    );
+    let elements: BoardObjectSVGElements;
+
+    if (elem instanceof SVGElement) {
+      elements = { [SVG_OBJECTS]: elem };
+    } else {
+      elements = elem;
+    }
+    this.objectsElementMap.set(boardObject, elements);
+    Object.keys(elements).forEach((key) => this.contexts[key].appendChild(elements[key]));
+
+    handler.updateElement(elements, boardObject, this.config);
+  }
+
+  #getObjectHandler(boardObject: SVGBoardObject) {
+    return 'handler' in boardObject
+      ? boardObject.handler
+      : this.config.theme.drawHandlers[boardObject.type];
+  }
+
+  #drawGrid() {
+    if (this.contexts[SVG_GRID_MASK]) {
+      this.svgElement.removeChild(this.contexts[SVG_GRID_MASK]);
+    }
+
+    if (this.contexts.gridElement) {
+      this.svgElement.removeChild(this.contexts.gridElement);
+    }
+
+    // create grid mask
+    const size = this.getSize();
+    this.contexts[SVG_GRID_MASK] = document.createElementNS(SVG_NS, 'mask');
+    this.contexts[SVG_GRID_MASK].id = generateId('mask');
+    this.contexts[
+      SVG_GRID_MASK
+    ].innerHTML = `<rect x="-0.5" y="-0.5" width="${size.x}" height="${size.y}" fill="white" />`;
+    this.svgElement.appendChild(this.contexts[SVG_GRID_MASK]);
+
+    // create grid
+    this.contexts.gridElement = createGrid(this);
+    this.contexts.gridElement.setAttribute('mask', `url(#${this.contexts[SVG_GRID_MASK].id})`);
+    this.svgElement.appendChild(this.contexts.gridElement);
+  }
+
+  #drawCoordinates() {
+    if (this.contexts.coordinatesElement) {
+      this.svgElement.removeChild(this.contexts.coordinatesElement);
+    }
+
+    this.contexts.coordinatesElement = createCoordinates(this);
+    this.contexts.coordinatesElement.style.opacity = this.config.coordinates ? '' : '0';
+    this.svgElement.appendChild(this.contexts.coordinatesElement);
+  }
+
+  #drawObjects() {
+    // remove old shadows layer
+    if (this.contexts[SVG_SHADOWS]) {
+      this.svgElement.removeChild(this.contexts[SVG_SHADOWS]);
+    }
+
+    // remove old objects layer
+    if (this.contexts[SVG_OBJECTS]) {
+      this.svgElement.removeChild(this.contexts[SVG_OBJECTS]);
+    }
+
+    // append new shadows layer
+    this.contexts[SVG_SHADOWS] = document.createElementNS(SVG_NS, 'g');
+    this.svgElement.appendChild(this.contexts[SVG_SHADOWS]);
+
+    // append new object layer
+    this.contexts[SVG_OBJECTS] = document.createElementNS(SVG_NS, 'g');
+    this.svgElement.appendChild(this.contexts[SVG_OBJECTS]);
+
+    // prepare map for objects and add all objects
+    this.objectsElementMap = new Map();
+    this.objects.forEach((boardObject) => this.#createObjectElements(boardObject));
   }
 }
