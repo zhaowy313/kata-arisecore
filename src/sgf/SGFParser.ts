@@ -3,14 +3,32 @@ import { SGFParsingContext } from './SGFParsingContext';
 import { PropIdent, SGFProperties, SGFCollection, SGFGameTree, SGFNode } from './sgfTypes';
 
 /**
- * Contains methods for parsing sgf string.
+ * Contains methods for parsing SGF (Smart Game Format) strings.
+ *
+ * This parser implements the complete SGF specification and converts SGF strings
+ * into structured JavaScript objects. The parser is stateless and can be reused
+ * for multiple parsing operations.
+ *
  * @module SGFParser
+ * @see {@link https://www.red-bean.com/sgf/} SGF Specification
+ *
+ * @example
+ * ```typescript
+ * const parser = new SGFParser();
+ * const collection = parser.parseCollection('(;GM[1]FF[4];B[pd];W[dd])');
+ * console.log(collection[0].sequence[0].GM); // ['1']
+ * ```
  */
 
 const CODE_A = 'A'.charCodeAt(0);
 const CODE_Z = 'Z'.charCodeAt(0);
 
-function isCharUCLetter(char: string) {
+/**
+ * Checks if a character is an uppercase letter (A-Z).
+ * @param char - The character to check
+ * @returns True if the character is an uppercase letter, false otherwise
+ */
+function isCharUCLetter(char: string): boolean {
   if (!char) {
     return false;
   }
@@ -20,149 +38,246 @@ function isCharUCLetter(char: string) {
 }
 
 /**
- * Parses SGF string into plain JavaScript object. You probably won't need to use this class, if you are using
- * other parts of the library. However this can be useful for example if you want to convert SGF file to other
- * formats or your own data structure. SGF property values in resulting object are stored as strings, so this is
- * not best choice for further processing. For that reason, WGo also contains `Kifu` object, which is higher
- * representation of go game record with methods for its easier manipulation.
+ * Parses SGF strings into plain JavaScript objects following the SGF specification.
+ *
+ * This parser converts SGF files into structured data that can be used for game analysis,
+ * format conversion, or further processing. Property values are preserved as strings
+ * to maintain compatibility with the SGF format.
+ *
+ * For higher-level game manipulation, consider using the Kifu class which provides
+ * a more convenient API for working with parsed SGF data.
  *
  * @example
- * ```javascript
- * // Parse SGF string into array of game records (SGF format actually allows multiple games in one file)
- * import { SGFParser } from 'wgo';
+ * ```typescript
+ * // Parse a simple SGF game
+ * const parser = new SGFParser();
+ * const games = parser.parseCollection('(;GM[1]SZ[19];B[pd];W[dd])');
  *
- * const sgfParser = new SGFParser();
- * const parsedGameRecords = sgfParser.parseCollection('(;DT[2100-12-01]KM[7.5];B[aa];W[bb])');
- * console.log(parsedGameRecords[0]); // { sequence: [ { DT: ['2100-12-01'], KM: ['7.5'] }, { B: ['aa'] }, { W: ['bb'] } ], children: [] }
+ * // Access game properties
+ * const firstGame = games[0];
+ * const rootNode = firstGame.sequence[0];
+ * console.log(rootNode.GM); // ['1'] - Game type
+ * console.log(rootNode.SZ); // ['19'] - Board size
  * ```
  */
 export class SGFParser {
   /**
-   * Parse SGF property value - `"[" CValueType "]"`.
+   * Parses a single SGF property value enclosed in square brackets.
    *
-   * @param sgfString
-   * @param optional If true, empty string will be accepted and undefined will be returned.
-   * @param context Internal state of the parsing. This should never be set.
+   * Handles escape sequences according to SGF specification:
+   * - `\]` becomes `]`
+   * - `\\` becomes `\`
+   * - `\newline` is ignored
+   * - All other escaped characters are preserved as-is
+   *
+   * @param sgfString - The complete SGF string being parsed
+   * @param optional - If true, returns empty string when no value is found instead of throwing
+   * @param context - Internal parsing state (should not be provided externally)
+   * @returns The parsed property value as a string
+   * @throws {SGFSyntaxError} When required brackets are missing or string ends unexpectedly
+   *
+   * @example
+   * ```typescript
+   * // Parse a simple value
+   * parser.parsePropertyValue('DT[2023-01-01]', false, context); // '2023-01-01'
+   *
+   * // Parse escaped value
+   * parser.parsePropertyValue('C[This is a \\] bracket]', false, context); // 'This is a ] bracket'
+   * ```
    */
   parsePropertyValue(
     sgfString: string,
     optional = false,
     context = new SGFParsingContext(),
   ): string {
+    if (!sgfString) {
+      throw new SGFSyntaxError('Cannot parse property value from empty string', sgfString, context);
+    }
+
     if (optional && context.currentNonWhitespaceChar(sgfString) !== '[') {
       return '';
     }
 
     let value = '';
 
-    // process "[" and read first char
+    // Process opening bracket and read first character
     let char = context.assertCharAndMoveToNext(sgfString, '[');
 
     while (char !== ']') {
       if (!char) {
-        // char mustn't be undefined
-        throw new SGFSyntaxError('End of SGF inside of property', sgfString, context);
+        throw new SGFSyntaxError(
+          'Unexpected end of SGF string inside property value',
+          sgfString,
+          context,
+        );
       } else if (char === '\\') {
-        // if there is character '\' save next character
+        // Handle escape sequences
         char = context.moveToNextChar(sgfString);
 
         if (!char) {
-          // char have to exist of course
-          throw new SGFSyntaxError('End of SGF inside of property', sgfString, context);
+          throw new SGFSyntaxError(
+            'Unexpected end of SGF string after escape character',
+            sgfString,
+            context,
+          );
         } else if (char === '\n') {
-          // ignore new line, otherwise save
+          // Escaped newlines are ignored per SGF spec
+          char = context.moveToNextChar(sgfString);
           continue;
         }
+        // All other escaped characters are preserved
       }
 
-      // save the character
       value += char;
-
-      // and move to next one
       char = context.moveToNextChar(sgfString);
     }
 
     context.assertCharAndMoveToNext(sgfString, ']');
-
     return value;
   }
 
   /**
-   * Reads the property identifiers (One or more UC letters) - `UcLetter { UcLetter }`.
+   * Parses a property identifier consisting of one or more uppercase letters.
    *
-   * @param sgfString
-   * @param context Internal state of the parsing. This should never be set.
+   * Property identifiers in SGF must start with an uppercase letter and can contain
+   * only uppercase letters. This follows the SGF specification for property names.
+   *
+   * @param sgfString - The complete SGF string being parsed
+   * @param context - Internal parsing state (should not be provided externally)
+   * @returns The property identifier as a string
+   * @throws {SGFSyntaxError} When the identifier contains invalid characters
+   *
+   * @example
+   * ```typescript
+   * parser.parsePropertyIdent('GM[1]', context); // 'GM'
+   * parser.parsePropertyIdent('PB[Black Player]', context); // 'PB'
+   * ```
    */
   parsePropertyIdent(sgfString: string, context = new SGFParsingContext()): PropIdent {
-    let ident = '';
-
-    // Read current significant character
-    let char = context.currentNonWhitespaceChar(sgfString);
-
-    if (!isCharUCLetter(char)) {
+    if (!sgfString) {
       throw new SGFSyntaxError(
-        'Property identifier must consists from upper case letters.',
+        'Cannot parse property identifier from empty string',
         sgfString,
         context,
       );
     }
 
-    ident += char;
+    let identifier = '';
+    let char = context.currentNonWhitespaceChar(sgfString);
+
+    if (!isCharUCLetter(char)) {
+      throw new SGFSyntaxError(
+        `Property identifier must start with uppercase letter, found: '${char || 'end of string'}'`,
+        sgfString,
+        context,
+      );
+    }
+
+    identifier += char;
 
     while ((char = context.moveToNextChar(sgfString))) {
       if (!isCharUCLetter(char)) {
         break;
       }
-
-      ident += char;
+      identifier += char;
     }
 
-    return ident as PropIdent;
+    return identifier as PropIdent;
   }
 
   /**
-   * Parses sequence of property values - `PropValue { PropValue }`.
+   * Parses a sequence of property values for a single property.
    *
-   * @param sgfString
-   * @param context Internal state of the parsing. This should never be set.
+   * Some SGF properties can have multiple values (e.g., multiple stones placed at once).
+   * This method parses all consecutive property values for a single property.
+   *
+   * @param sgfString - The complete SGF string being parsed
+   * @param context - Internal parsing state (should not be provided externally)
+   * @returns Array of property values as strings
+   * @throws {SGFSyntaxError} When property values are malformed
+   *
+   * @example
+   * ```typescript
+   * // Single value
+   * parser.parsePropertyValues('GM[1]', context); // ['1']
+   *
+   * // Multiple values (e.g., multiple stones)
+   * parser.parsePropertyValues('AB[pd][dd][pp]', context); // ['pd', 'dd', 'pp']
+   * ```
    */
-  parsePropertyValues(sgfString: string, context = new SGFParsingContext()) {
+  parsePropertyValues(sgfString: string, context = new SGFParsingContext()): string[] {
     const values: string[] = [];
-    let value = this.parsePropertyValue(sgfString, false, context);
-    values.push(value);
 
-    while ((value = this.parsePropertyValue(sgfString, true, context))) {
-      values.push(value);
+    // Parse the first required value
+    const firstValue = this.parsePropertyValue(sgfString, false, context);
+    values.push(firstValue);
+
+    // Parse any additional optional values
+    let additionalValue: string;
+    while ((additionalValue = this.parsePropertyValue(sgfString, true, context))) {
+      values.push(additionalValue);
     }
 
     return values;
   }
 
   /**
-   * Parses a SGF property - `PropIdent PropValue { PropValue }`.
+   * Parses a complete SGF property (identifier + values).
    *
-   * @param sgfString
-   * @param context Internal state of the parsing. This should never be set.
+   * A property consists of a property identifier followed by one or more values.
+   * This is a fundamental building block of SGF nodes.
+   *
+   * @param sgfString - The complete SGF string being parsed
+   * @param context - Internal parsing state (should not be provided externally)
+   * @returns Tuple of [property identifier, array of values] or undefined if no property found
+   *
+   * @example
+   * ```typescript
+   * parser.parseProperty('GM[1]', context); // ['GM', ['1']]
+   * parser.parseProperty('AB[pd][dd]', context); // ['AB', ['pd', 'dd']]
+   * ```
    */
   parseProperty(
     sgfString: string,
     context = new SGFParsingContext(),
   ): [PropIdent, string[]] | undefined {
-    if (!isCharUCLetter(context.currentNonWhitespaceChar(sgfString))) {
-      return;
+    const currentChar = context.currentNonWhitespaceChar(sgfString);
+
+    if (!isCharUCLetter(currentChar)) {
+      return undefined;
     }
 
-    return [
-      this.parsePropertyIdent(sgfString, context),
-      this.parsePropertyValues(sgfString, context),
-    ];
+    try {
+      const identifier = this.parsePropertyIdent(sgfString, context);
+      const values = this.parsePropertyValues(sgfString, context);
+      return [identifier, values];
+    } catch (error) {
+      if (error instanceof SGFSyntaxError) {
+        throw new SGFSyntaxError(`Error parsing property: ${error.message}`, sgfString, context);
+      }
+      throw error;
+    }
   }
 
   /**
-   * Parses a SGF node - `";" { Property }`.
+   * Parses a complete SGF node starting with a semicolon.
    *
-   * @param sgfString
-   * @param context Internal state of the parsing. This should never be set.
+   * A node contains zero or more properties and represents a single position
+   * or move in the game tree. The first character must be a semicolon.
+   *
+   * @param sgfString - The complete SGF string being parsed
+   * @param context - Internal parsing state (should not be provided externally)
+   * @returns Object containing all properties of the node
+   * @throws {SGFSyntaxError} When node format is invalid
+   *
+   * @example
+   * ```typescript
+   * parser.parseNode(';GM[1]SZ[19]', context);
+   * // { GM: ['1'], SZ: ['19'] }
+   *
+   * parser.parseNode(';B[pd]', context);
+   * // { B: ['pd'] }
+   * ```
    */
   parseNode(sgfString: string, context = new SGFParsingContext()): SGFNode {
     context.assertCharAndMoveToNext(sgfString, ';');
@@ -171,23 +286,46 @@ export class SGFParser {
     let property: [PropIdent, string[]] | undefined;
 
     while ((property = this.parseProperty(sgfString, context))) {
-      properties[property[0]] = property[1];
+      const [identifier, values] = property;
+
+      if (properties[identifier]) {
+        throw new SGFSyntaxError(
+          `Duplicate property '${identifier}' found in node`,
+          sgfString,
+          context,
+        );
+      }
+
+      properties[identifier] = values;
     }
 
     return properties;
   }
 
   /**
-   * Parses a SGF Sequence - `Node { Node }`.
+   * Parses a sequence of SGF nodes.
    *
-   * @param sgfString
-   * @param context Internal state of the parsing. This should never be set.
+   * A sequence represents the main line of play and consists of one or more nodes.
+   * Each node in the sequence represents a consecutive position in the game.
+   *
+   * @param sgfString - The complete SGF string being parsed
+   * @param context - Internal parsing state (should not be provided externally)
+   * @returns Array of nodes representing the main sequence
+   * @throws {SGFSyntaxError} When sequence format is invalid
+   *
+   * @example
+   * ```typescript
+   * parser.parseSequence(';GM[1];B[pd];W[dd]', context);
+   * // [{ GM: ['1'] }, { B: ['pd'] }, { W: ['dd'] }]
+   * ```
    */
   parseSequence(sgfString: string, context = new SGFParsingContext()): SGFNode[] {
     const sequence: SGFNode[] = [];
 
+    // Parse the first required node
     sequence.push(this.parseNode(sgfString, context));
 
+    // Parse any additional nodes in the sequence
     while (context.currentNonWhitespaceChar(sgfString) === ';') {
       sequence.push(this.parseNode(sgfString, context));
     }
@@ -196,10 +334,25 @@ export class SGFParser {
   }
 
   /**
-   * Parses a SGF *GameTree* - `"(" Sequence { GameTree } ")"`.
+   * Parses a complete SGF game tree enclosed in parentheses.
    *
-   * @param sgfString
-   * @param context Internal state of the parsing. This should never be set.
+   * A game tree consists of a main sequence and zero or more child game trees
+   * representing variations. This represents a complete game or game fragment.
+   *
+   * @param sgfString - The complete SGF string being parsed
+   * @param context - Internal parsing state (should not be provided externally)
+   * @returns Game tree object with sequence and children
+   * @throws {SGFSyntaxError} When game tree format is invalid
+   *
+   * @example
+   * ```typescript
+   * parser.parseGameTree('(;GM[1];B[pd];W[dd])', context);
+   * // { sequence: [{ GM: ['1'] }, { B: ['pd'] }, { W: ['dd'] }], children: [] }
+   *
+   * // With variations
+   * parser.parseGameTree('(;GM[1];B[pd](;W[dd])(;W[pp]))', context);
+   * // { sequence: [{ GM: ['1'] }, { B: ['pd'] }], children: [...] }
+   * ```
    */
   parseGameTree(sgfString: string, context = new SGFParsingContext()): SGFGameTree {
     context.assertCharAndMoveToNext(sgfString, '(');
@@ -207,6 +360,7 @@ export class SGFParser {
     const sequence = this.parseSequence(sgfString, context);
     let children: SGFGameTree[] = [];
 
+    // Parse any child game trees (variations)
     if (context.currentNonWhitespaceChar(sgfString) === '(') {
       children = this.parseCollection(sgfString, context);
     }
@@ -217,15 +371,38 @@ export class SGFParser {
   }
 
   /**
-   * Parses a SGF *Collection* - `Collection = GameTree { GameTree }`. This is the main method for parsing SGF file.
+   * Parses a complete SGF collection containing one or more game trees.
    *
-   * @param sgfString
-   * @param context Internal state of the parsing. This should never be set.
+   * This is the main entry point for parsing SGF files. A collection can contain
+   * multiple independent games, though most SGF files contain only one game.
+   *
+   * @param sgfString - The complete SGF string to parse
+   * @param context - Internal parsing state (should not be provided externally)
+   * @returns Array of game trees representing all games in the collection
+   * @throws {SGFSyntaxError} When SGF format is invalid
+   *
+   * @example
+   * ```typescript
+   * // Single game
+   * parser.parseCollection('(;GM[1]FF[4];B[pd];W[dd])');
+   * // [{ sequence: [...], children: [] }]
+   *
+   * // Multiple games
+   * parser.parseCollection('(;GM[1];B[pd])(;GM[1];B[dd])');
+   * // [{ sequence: [...], children: [] }, { sequence: [...], children: [] }]
+   * ```
    */
   parseCollection(sgfString: string, context = new SGFParsingContext()): SGFCollection {
+    if (!sgfString || !sgfString.trim()) {
+      throw new SGFSyntaxError('Cannot parse empty SGF string', sgfString, context);
+    }
+
     const gameTrees: SGFCollection = [];
+
+    // Parse the first required game tree
     gameTrees.push(this.parseGameTree(sgfString, context));
 
+    // Parse any additional game trees
     while (context.currentNonWhitespaceChar(sgfString) === '(') {
       gameTrees.push(this.parseGameTree(sgfString, context));
     }
