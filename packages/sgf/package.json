@@ -1,0 +1,23 @@
+{
+  "name": "@wgojs/sgf",
+  "version": "3.0.0-alpha.10",
+  "description": "SGF (Smart Game Format) parser for JavaScript/TypeScript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waltheri/wgo.js.git"
+  },
+  "keywords": ["sgf", "go", "baduk", "weiqi", "parser", "smart-game-format"],
+  "author": "Jan Prokop <thebestgoplayer@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/waltheri/wgo.js/issues"
+  },
+  "homepage": "http://waltheri.github.io/wgo.js"
+}
