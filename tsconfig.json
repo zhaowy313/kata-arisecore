@@ -18,6 +18,7 @@
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "strictPropertyInitialization": false,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "noImplicitOverride": true
   }
 }

@@ -1,11 +1,13 @@
 {
     "editor.tabSize": 2,
     "cSpell.words": [
-        "Idents",
-        "KOMI",
         "dont",
+        "EBNF",
+        "Idents",
         "jsgf",
-        "kifu"
+        "kifu",
+        "KOMI",
+        "wgojs"
     ],
     "search.exclude": {
         "dist/**/*": true,
