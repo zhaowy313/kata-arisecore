@@ -1,7 +1,7 @@
 import { SGFSyntaxError } from './SGFSyntaxError';
 
 /**
- * SGF parsing context. This is internal class for SGFParser.
+ * SGF parsing reader. This is used by SFG parser to read SGF strings.
  */
 export class SGFReader {
   /** Custom data */
@@ -92,4 +92,21 @@ export class SGFReader {
   getPosition(): Pick<SGFReader, 'position' | 'line' | 'column'> {
     return { position: this.position, line: this.line, column: this.column };
   }
+
+  /**
+   * Checks if a character is an uppercase letter (A-Z).
+   * @param char - The character to check
+   * @returns True if the character is an uppercase letter, false otherwise
+   */
+  static isCharUCLetter(char: string): boolean {
+    if (!char) {
+      return false;
+    }
+
+    const charCode = char.charCodeAt(0);
+    return charCode >= CODE_A && charCode <= CODE_Z;
+  }
 }
+
+const CODE_A = 'A'.charCodeAt(0);
+const CODE_Z = 'Z'.charCodeAt(0);

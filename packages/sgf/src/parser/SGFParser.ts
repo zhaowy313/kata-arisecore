@@ -3,6 +3,7 @@ import { SGFReader } from './SGFReader';
 import { PropIdent, SGFCollection, SGFGameTree, SGFNode, StandardSGFProperties } from '../sgfTypes';
 import { SGFPropertyMapper } from '../mapper/SGFPropertyMapper';
 import { StandardSGFPropertyMapper } from '../mapper/StandardSGFPropertyMapper';
+import { SGFParsingContext } from './SGFParsingContext';
 
 /**
  * Configuration options for {@link SGFParser}.
@@ -14,7 +15,7 @@ export interface SGFParserConfig<
   SGF_PROPS extends Record<string, unknown> = StandardSGFProperties,
   GAME_TREE = SGFGameTree<SGF_PROPS>,
   COLLECTION = SGFCollection<SGF_PROPS>,
-  CONTEXT extends Record<string, unknown> = Record<string, unknown>,
+  CONTEXT extends SGFParsingContext = SGFParsingContext,
 > {
   /**
    * Optional custom property mapper for converting SGF property values to JavaScript types.
@@ -80,7 +81,7 @@ export class SGFParser<
   SGF_PROPS extends Record<string, unknown> = StandardSGFProperties,
   GAME_TREE = SGFGameTree<SGF_PROPS>,
   COLLECTION = SGFCollection<SGF_PROPS>,
-  CONTEXT extends Record<string, unknown> = Record<string, unknown>,
+  CONTEXT extends SGFParsingContext = SGFParsingContext,
 > {
   propertyMapper: SGFPropertyMapper<SGF_PROPS>;
   visitNode?: (node: SGFNode<SGF_PROPS>, context: CONTEXT) => void;
@@ -130,7 +131,7 @@ export class SGFParser<
     let identifier = '';
     let char = reader.nextSignificant();
 
-    if (!char || !isCharUCLetter(char)) {
+    if (!char || !SGFReader.isCharUCLetter(char)) {
       throw new SGFSyntaxError(
         `Property identifier must start with uppercase letter, found: '${char || 'end of string'}'`,
         reader.source,
@@ -141,7 +142,7 @@ export class SGFParser<
     identifier += char;
 
     while ((char = reader.peek())) {
-      if (!isCharUCLetter(char)) {
+      if (!SGFReader.isCharUCLetter(char)) {
         break;
       }
       identifier += char;
@@ -253,7 +254,7 @@ export class SGFParser<
   #parseProperty<T extends keyof SGF_PROPS>(reader: SGFReader): [T, SGF_PROPS[T]] | undefined {
     const currentChar = reader.peekSignificant();
 
-    if (!currentChar || !isCharUCLetter(currentChar)) {
+    if (!currentChar || !SGFReader.isCharUCLetter(currentChar)) {
       return undefined;
     }
 
@@ -359,6 +360,7 @@ export class SGFParser<
     reader.expect(';');
 
     const node = this.#parseProperties(reader);
+    context.move = context.move != null ? context.move + 1 : 0;
     this.visitNode?.(node, context);
 
     return node;
@@ -402,10 +404,12 @@ export class SGFParser<
 
     const sequence = this.#parseSequence(reader, context);
     const children: GAME_TREE[] = [];
+    const currentMove = context.move;
 
     // Parse any child game trees (variations)
     while (reader.peekSignificant() === '(') {
       children.push(this.#parseTree(reader, context));
+      context.move = currentMove; // Reset move count for child trees
     }
 
     reader.expect(')');
@@ -454,11 +458,9 @@ export class SGFParser<
 
     const gameTrees: GAME_TREE[] = [];
 
-    // Parse the first required game tree
-    gameTrees.push();
-
     // Parse any additional game trees
     while (reader.peekSignificant() === '(') {
+      context.game = gameTrees.length;
       gameTrees.push(this.#parseTree(reader, context));
     }
 
@@ -494,21 +496,72 @@ export class SGFParser<
   parseCollection(sgfString: string, context: CONTEXT = {} as CONTEXT): COLLECTION {
     return this.#parseCollection(new SGFReader(sgfString), context);
   }
-}
 
-const CODE_A = 'A'.charCodeAt(0);
-const CODE_Z = 'Z'.charCodeAt(0);
+  // Stringify methods
 
-/**
- * Checks if a character is an uppercase letter (A-Z).
- * @param char - The character to check
- * @returns True if the character is an uppercase letter, false otherwise
- */
-function isCharUCLetter(char: string): boolean {
-  if (!char) {
-    return false;
+  #stringifyPropertyValue(value: string) {
+    // Escape square brackets and backslashes according to SGF specification
+    return value.replace(/\\/g, '\\\\').replace(/\]/g, '\\]');
   }
 
-  const charCode = char.charCodeAt(0);
-  return charCode >= CODE_A && charCode <= CODE_Z;
+  /**
+   * Stringifies SGF properties into a string representation. SGF properties are basically SGF node, without
+   * leading `;` character. Config `propertyMapper` is used to convert property values to SGF format.
+   *
+   * @param properties - Object containing SGF properties, where keys are property identifiers and values are property values.
+   * @returns String representation of the properties, e.g. `B[pd];W[dd]`
+   */
+  stringifyProperties(properties: SGF_PROPS): string {
+    return Object.entries(properties)
+      .map(([key, value]) => {
+        return value !== undefined
+          ? `${key}[${this.propertyMapper
+              .unmap(key, value as any)!
+              .map((value) => this.#stringifyPropertyValue(value))
+              .join('][')}]`
+          : '';
+      })
+      .join('');
+  }
+
+  /**
+   * Stringifies a SGF game tree object into SGF. Output will look like `(;GM[1];B[pd];W[dd])`.
+   * Can be used as main stringify method for creating SGF files, if one game record is enough.
+   *
+   * Currently this method doesn't support custom SGF tree objects. If you specify
+   * config `transformTree` to parse SGF into custom object, it cannot be transformed back into
+   * SGF by this method - you must transform it by yourself. This may change in the future versions.
+   *
+   * @param gameTree - The SGF game tree object to stringify, containing sequence and children.
+   * @returns String representation of the game tree in SGF format
+   */
+  stringifyGameTree(gameTree: SGFGameTree<SGF_PROPS>): string {
+    if (!gameTree.sequence.length) {
+      throw new Error('SGF game tree must contain at least one node in sequence');
+    }
+
+    const sequenceString = gameTree.sequence
+      .map((node) => `;${this.stringifyProperties(node)}`)
+      .join('');
+    const childrenString = gameTree.children.map((child) => this.stringifyGameTree(child)).join('');
+
+    return `(${sequenceString}${childrenString})`;
+  }
+
+  /**
+   * Stringifies a collection of SGF game trees into SGF format.
+   * This is the main entry point for creating SGF files with multiple games.
+   *
+   * This method currently doesn't support custom SGF collection objects.
+   *
+   * @param collection - The SGF collection object containing multiple game trees.
+   * @return String representation of the collection in SGF format
+   */
+  stringifyCollection(collection: SGFCollection<SGF_PROPS>): string {
+    if (!collection.length) {
+      throw new Error('SGF must contain at least one game tree');
+    }
+
+    return collection.map((gameTree) => this.stringifyGameTree(gameTree)).join('');
+  }
 }

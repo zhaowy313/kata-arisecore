@@ -1,5 +1,7 @@
 import { SGFSyntaxError, SGFParser, IdentitySGFPropertyMapper } from '../src';
 import { describe, test, expect } from 'vitest';
+import { SGFParsingContext } from '../src/parser/SGFParsingContext';
+import { Point } from '@wgojs/common';
 
 describe('Parsing nodes - parseProperties()', () => {
   const parser = new SGFParser();
@@ -188,15 +190,23 @@ describe('Parser extension methods', () => {
   test('Config `visitNode` visits all nodes', () => {
     const visited: any[] = [];
     const parser = new SGFParser({
+      propertyMapper: IdentitySGFPropertyMapper,
       visitNode: (node, context) => {
-        visited.push({ node, position: context.position });
+        visited.push({ node, ...context });
       },
     });
     parser.parseCollection('(;A[1];B[2](;C[3])(;D[4]))');
 
     expect(visited.length).toBe(4);
     expect(visited[0].node).toHaveProperty('A');
-    expect(visited[0].position).toBe(6);
+    expect(visited[0].game).toBe(0);
+    expect(visited[0].move).toBe(0);
+    expect(visited[1].game).toBe(0);
+    expect(visited[1].move).toBe(1);
+    expect(visited[2].game).toBe(0);
+    expect(visited[2].move).toBe(2);
+    expect(visited[3].game).toBe(0);
+    expect(visited[3].move).toBe(2);
     expect(visited.some((v) => v.node.B)).toBe(true);
     expect(visited.some((v) => v.node.C)).toBe(true);
     expect(visited.some((v) => v.node.D)).toBe(true);
@@ -204,7 +214,8 @@ describe('Parser extension methods', () => {
 
   test('Custom context data is preserved', () => {
     const parser = new SGFParser({
-      visitNode: (_node, context: { count: number }) => {
+      propertyMapper: IdentitySGFPropertyMapper,
+      visitNode: (_node, context: SGFParsingContext<{ count: number }>) => {
         context.count++;
       },
     });
@@ -215,21 +226,24 @@ describe('Parser extension methods', () => {
 
   test('Config `transformTree` works', () => {
     const parser = new SGFParser({
+      propertyMapper: IdentitySGFPropertyMapper,
       transformTree: (
         sequence,
         children: Array<{ seqLen: number; childCount: number }>,
-        _context,
+        context,
       ) => ({
         seqLen: sequence.length,
         childCount: children.length,
+        game: context.game,
       }),
     });
-    const tree = parser.parseTree('(;A[1];B[2](;C[3])(;D[4]))');
-    expect(tree).toEqual({ seqLen: 2, childCount: 2 });
+    const tree = parser.parseCollection('(;A[1];B[2](;C[3])(;D[4]))');
+    expect(tree).toEqual([{ seqLen: 2, childCount: 2, game: 0 }]);
   });
 
   test('Config `transformCollection` change output structure', () => {
     const parser = new SGFParser({
+      propertyMapper: IdentitySGFPropertyMapper,
       transformCollection: (collection, _context) => ({
         total: collection.length,
         trees: collection,
@@ -243,6 +257,7 @@ describe('Parser extension methods', () => {
 
   test('transformTree and transformCollection can be combined', () => {
     const parser = new SGFParser({
+      propertyMapper: IdentitySGFPropertyMapper,
       transformTree: (sequence, children: Array<{ nodeCount: number }>) => ({
         nodeCount: sequence.length + children.reduce((acc, c) => acc + (c.nodeCount || 0), 0),
       }),
@@ -252,5 +267,272 @@ describe('Parser extension methods', () => {
     });
     const result = parser.parseCollection('(;A[1];B[2](;C[3])(;D[4]))(;E[5])');
     expect(result).toHaveProperty('totalNodes', 5);
+  });
+});
+
+describe('Stringify methods', () => {
+  const parser = new SGFParser();
+  const identityParser = new SGFParser({ propertyMapper: IdentitySGFPropertyMapper });
+
+  describe('stringifyProperties()', () => {
+    test('Stringifies empty properties', () => {
+      const properties = {};
+      expect(parser.stringifyProperties(properties)).toBe('');
+    });
+
+    test('Stringifies single property with StandardSGFPropertyMapper', () => {
+      const properties = { B: { x: 0, y: 0 } };
+      expect(parser.stringifyProperties(properties)).toBe('B[aa]');
+    });
+
+    test('Stringifies multiple properties with StandardSGFPropertyMapper', () => {
+      const properties = {
+        B: { x: 0, y: 0 },
+        C: 'test comment',
+        KM: 6.5,
+      };
+      const result = parser.stringifyProperties(properties);
+      // Properties can be in any order, so check each one is present
+      expect(result).toContain('B[aa]');
+      expect(result).toContain('C[test comment]');
+      expect(result).toContain('KM[6.5]');
+    });
+
+    test('Stringifies properties with multiple values', () => {
+      const properties = {
+        AB: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+      };
+      expect(parser.stringifyProperties(properties)).toBe('AB[aa][bb]');
+    });
+
+    test('Escapes special characters in property values', () => {
+      const properties = {
+        C: 'Comment with ] bracket and \\ backslash',
+      };
+      expect(parser.stringifyProperties(properties)).toBe(
+        'C[Comment with \\] bracket and \\\\ backslash]',
+      );
+    });
+
+    test('Handles undefined properties by omitting them', () => {
+      const properties = {
+        B: { x: 0, y: 0 },
+        C: undefined,
+        W: { x: 1, y: 1 },
+      };
+      const result = parser.stringifyProperties(properties);
+      expect(result).toContain('B[aa]');
+      expect(result).toContain('W[bb]');
+      expect(result).not.toContain('C');
+    });
+
+    test('Works with IdentitySGFPropertyMapper', () => {
+      const properties = {
+        B: ['aa'],
+        C: ['test comment'],
+        AB: ['aa', 'bb'],
+      };
+      const result = identityParser.stringifyProperties(properties);
+      expect(result).toContain('B[aa]');
+      expect(result).toContain('C[test comment]');
+      expect(result).toContain('AB[aa][bb]');
+    });
+
+    test('Handles complex properties like labels and lines', () => {
+      const properties = {
+        LB: [[{ x: 0, y: 0 }, 'A'] as [Point, string], [{ x: 1, y: 1 }, 'B'] as [Point, string]],
+        AR: [
+          [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ] as [Point, Point],
+        ],
+      };
+      const result = parser.stringifyProperties(properties);
+      expect(result).toContain('LB[aa:A][bb:B]');
+      expect(result).toContain('AR[aa:bb]');
+    });
+  });
+
+  describe('stringifyGameTree()', () => {
+    test('Stringifies simple game tree', () => {
+      const gameTree = {
+        sequence: [{ GM: 1, FF: 4 }, { B: { x: 15, y: 3 } }, { W: { x: 3, y: 15 } }],
+        children: [],
+      };
+      const result = parser.stringifyGameTree(gameTree);
+      expect(result).toMatch(/^\(;.*\)$/);
+      expect(result).toContain('GM[1]');
+      expect(result).toContain('FF[4]');
+      expect(result).toContain('B[pd]');
+      expect(result).toContain('W[dp]');
+    });
+
+    test('Stringifies game tree with variations', () => {
+      const gameTree = {
+        sequence: [{ GM: 1 }, { B: { x: 0, y: 0 } }],
+        children: [
+          {
+            sequence: [{ W: { x: 1, y: 1 } }],
+            children: [],
+          },
+          {
+            sequence: [{ W: { x: 2, y: 2 } }],
+            children: [],
+          },
+        ],
+      };
+      const result = parser.stringifyGameTree(gameTree);
+      expect(result).toMatch(/^\(;.*\(;.*\)\(;.*\)\)$/);
+      expect(result).toContain('GM[1]');
+      expect(result).toContain('B[aa]');
+      expect(result).toContain('W[bb]');
+      expect(result).toContain('W[cc]');
+    });
+
+    test('Stringifies deeply nested variations', () => {
+      const gameTree = {
+        sequence: [{ GM: 1 }],
+        children: [
+          {
+            sequence: [{ B: { x: 0, y: 0 } }],
+            children: [
+              {
+                sequence: [{ W: { x: 1, y: 1 } }],
+                children: [],
+              },
+            ],
+          },
+        ],
+      };
+      const result = parser.stringifyGameTree(gameTree);
+      expect(result).toMatch(/^\(;.*\(;.*\(;.*\)\)\)$/);
+      expect(result).toContain('GM[1]');
+      expect(result).toContain('B[aa]');
+      expect(result).toContain('W[bb]');
+    });
+
+    test('Throws error for empty sequence', () => {
+      const gameTree = {
+        sequence: [],
+        children: [],
+      };
+      expect(() => parser.stringifyGameTree(gameTree)).toThrow(
+        'SGF game tree must contain at least one node in sequence',
+      );
+    });
+
+    test('Works with IdentitySGFPropertyMapper', () => {
+      const gameTree = {
+        sequence: [{ GM: ['1'] }, { B: ['aa'] }],
+        children: [],
+      };
+      const result = identityParser.stringifyGameTree(gameTree);
+      expect(result).toBe('(;GM[1];B[aa])');
+    });
+  });
+
+  describe('stringifyCollection()', () => {
+    test('Stringifies single game collection', () => {
+      const collection = [
+        {
+          sequence: [{ GM: 1, FF: 4 }, { B: { x: 0, y: 0 } }],
+          children: [],
+        },
+      ];
+      const result = parser.stringifyCollection(collection);
+      expect(result).toMatch(/^\(;.*\)$/);
+      expect(result).toContain('GM[1]');
+      expect(result).toContain('FF[4]');
+      expect(result).toContain('B[aa]');
+    });
+
+    test('Stringifies multiple games collection', () => {
+      const collection = [
+        {
+          sequence: [{ GM: 1 }, { B: { x: 0, y: 0 } }],
+          children: [],
+        },
+        {
+          sequence: [{ GM: 1 }, { B: { x: 1, y: 1 } }],
+          children: [],
+        },
+      ];
+      const result = parser.stringifyCollection(collection);
+      expect(result).toMatch(/^\(;.*\)\(;.*\)$/);
+      expect(result).toContain('B[aa]');
+      expect(result).toContain('B[bb]');
+    });
+
+    test('Throws error for empty collection', () => {
+      const collection: any[] = [];
+      expect(() => parser.stringifyCollection(collection)).toThrow(
+        'SGF must contain at least one game tree',
+      );
+    });
+  });
+
+  describe('Round-trip tests', () => {
+    test('Properties roundtrip correctly with StandardSGFPropertyMapper', () => {
+      const originalSGF = 'GM[1]FF[4]SZ[19]KM[6.5]B[pd]W[dd]C[Test comment]AB[aa][bb]';
+      const parsed = parser.parseProperties(originalSGF);
+      const stringified = parser.stringifyProperties(parsed);
+
+      // Parse the stringified version and compare with original
+      const reparsed = parser.parseProperties(stringified);
+      expect(reparsed).toEqual(parsed);
+    });
+
+    test('Properties roundtrip correctly with IdentitySGFPropertyMapper', () => {
+      const originalSGF = 'GM[1]FF[4]SZ[19]KM[6.5]B[pd]W[dd]C[Test comment]AB[aa][bb]';
+      const parsed = identityParser.parseProperties(originalSGF);
+      const stringified = identityParser.stringifyProperties(parsed);
+      const reparsed = identityParser.parseProperties(stringified);
+      expect(reparsed).toEqual(parsed);
+    });
+
+    test('Game tree roundtrip correctly', () => {
+      const originalSGF = '(;GM[1]FF[4];B[pd];W[dd](;B[pq])(;B[dp]))';
+      const parsed = parser.parseTree(originalSGF);
+      const stringified = parser.stringifyGameTree(parsed);
+      const reparsed = parser.parseTree(stringified);
+      expect(reparsed).toEqual(parsed);
+    });
+
+    test('Collection roundtrip correctly', () => {
+      const originalSGF = '(;GM[1];B[pd])(;GM[1];B[dd])';
+      const parsed = parser.parseCollection(originalSGF);
+      const stringified = parser.stringifyCollection(parsed);
+      const reparsed = parser.parseCollection(stringified);
+      expect(reparsed).toEqual(parsed);
+    });
+
+    test('Complex SGF with variations and comments roundtrips correctly', () => {
+      const originalSGF =
+        '(;GM[1]FF[4]SZ[19]C[Root comment];B[pd]C[First move](;W[dd]C[Variation 1])(;W[dp]C[Variation 2]))';
+      const parsed = parser.parseTree(originalSGF);
+      const stringified = parser.stringifyGameTree(parsed);
+      const reparsed = parser.parseTree(stringified);
+      expect(reparsed).toEqual(parsed);
+    });
+
+    test('SGF with special characters roundtrips correctly', () => {
+      const originalSGF = 'C[Comment with \\] and \\\\ characters]';
+      const parsed = parser.parseProperties(originalSGF);
+      const stringified = parser.stringifyProperties(parsed);
+      const reparsed = parser.parseProperties(stringified);
+      expect(reparsed).toEqual(parsed);
+    });
+
+    test('SGF with empty properties roundtrips correctly', () => {
+      const originalSGF = 'KO[]FG[]';
+      const parsed = identityParser.parseProperties(originalSGF);
+      const stringified = identityParser.stringifyProperties(parsed);
+      const reparsed = identityParser.parseProperties(stringified);
+      expect(reparsed).toEqual(parsed);
+    });
   });
 });

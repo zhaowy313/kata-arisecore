@@ -2,19 +2,18 @@
 export * from './sgfTypes';
 
 // Parser related exports
-export { SGFParser, SGFParserConfig } from './parser/SGFParser';
+export { SGFParser, type SGFParserConfig } from './parser/SGFParser';
+export { type SGFParsingContext } from './parser/SGFParsingContext';
 export { SGFSyntaxError } from './parser/SGFSyntaxError';
 
 // Mapper related exports
-export { SGFPropertyMapper } from './mapper/SGFPropertyMapper';
+export { type SGFPropertyMapper } from './mapper/SGFPropertyMapper';
 export {
   StandardSGFPropertyMapper,
-  mapPoint,
   mapNullablePoint,
   mapPointList,
   mapLabelList,
   mapLineList,
-  unmapPoint,
   unmapNullablePoint,
   unmapPointList,
   unmapLabelList,

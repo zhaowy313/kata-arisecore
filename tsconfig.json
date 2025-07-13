@@ -1,24 +1,17 @@
 {
-  "include": [
-    "./src/index.ts",
-    "./src/types.ts",
-    "./src/sgf/**/*",
-    "./src/kifu/**/*",
-    "./src/game/**/*"
-  ],
   "compilerOptions": {
-    "target": "ES2015",
-    "sourceMap": true,
-    "declaration": true,
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "module": "esnext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+
+    /* Linting */
     "strict": true,
-    "strictNullChecks": true,
-    "downlevelIteration": true,
-    "resolveJsonModule": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
-    "strictPropertyInitialization": false,
-    "isolatedModules": true,
-    "noImplicitOverride": true
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
   }
 }

@@ -31,5 +31,5 @@ export interface SGFPropertyMapper<PROPS extends Record<string, unknown>> {
   unmap<IDENT extends string | keyof PROPS>(
     propIdent: IDENT,
     propValue: IDENT extends keyof PROPS ? PROPS[IDENT] : string[],
-  ): string[];
+  ): string[] | undefined;
 }

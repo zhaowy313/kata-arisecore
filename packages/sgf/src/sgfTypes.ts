@@ -1,3 +1,5 @@
+import { Point, Color } from '@wgojs/common';
+
 export enum PropIdent {
   // Move Properties
   BlackMove = 'B',
@@ -79,30 +81,30 @@ export enum PropIdent {
   Figure = 'FG',
   PrintMoveNumbers = 'PM',
   BoardSection = 'VW',
-  Handicap = 'HA',
 
   // GO specific Properties
+  Handicap = 'HA',
   Komi = 'KM',
   BlackTerritory = 'TB',
   WhiteTerritory = 'TW',
 }
 
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export type SGFProperties = Record<string, string[]>;
+export type SGFProperties = Record<string, string[] | undefined>;
 
 export type StandardSGFProperties = {
+  // Move Properties
   B?: Point | null;
   KO?: null;
   MN?: number;
   W?: Point | null;
+
+  // Setup Properties
   AB?: Point[];
   AE?: Point[];
   AW?: Point[];
-  PL?: 'B' | 'W';
+  PL?: Color;
+
+  // Node Annotation Properties
   C?: string;
   DM?: string;
   GB?: string;
@@ -111,10 +113,14 @@ export type StandardSGFProperties = {
   N?: string;
   UC?: string;
   V?: number;
+
+  // Move Annotation Properties
   BM?: string;
   DO?: string;
   IT?: string;
   TE?: string;
+
+  // Markup Properties
   AR?: [Point, Point][];
   CR?: Point[];
   DD?: Point[];
@@ -124,12 +130,16 @@ export type StandardSGFProperties = {
   SL?: Point[];
   SQ?: Point[];
   TR?: Point[];
+
+  // Root Properties
   AP?: [string, string];
   CA?: string;
   FF?: number;
   GM?: number;
   ST?: number;
   SZ?: number | [number, number];
+
+  // Game Info Properties
   AN?: string;
   BR?: string;
   BT?: string;
@@ -151,22 +161,24 @@ export type StandardSGFProperties = {
   US?: string;
   WR?: string;
   WT?: string;
+
+  // Timing Properties
   BL?: number;
   OB?: number;
   OW?: number;
   WL?: number;
+
+  // Miscellaneous Properties
   FG?: [number, string] | null;
   PM?: number;
   VW?: [Point, Point];
+
+  // GO specific Properties
   HA?: number;
   KM?: number;
   TB?: Point[];
   TW?: Point[];
 };
-
-/*export type SGFProperties = Partial<SGFStandardProperties> & {
-  [K in Exclude<string, keyof SGFStandardProperties>]?: string[];
-};*/
 
 export type SGFNode<SGF_PROPS extends Record<string, unknown>> = SGF_PROPS;
 

@@ -1,26 +1,6 @@
-import { Point, StandardSGFProperties } from '../sgfTypes';
+import { Color, Point } from '@wgojs/common';
+import { StandardSGFProperties } from '../sgfTypes';
 import { SGFPropertyMapper } from './SGFPropertyMapper';
-
-/**
- * Maps a string representation of a point (like "aa") to a Point object.
- * @param str - The string representation of the point.
- * @returns The mapped Point object.
- */
-export function mapPoint(str: string): Point {
-  return {
-    x: str.charCodeAt(0) - 97,
-    y: str.charCodeAt(1) - 97,
-  };
-}
-
-/**
- * Converts a Point object to its SGF string representation.
- * @param point - The Point object to convert.
- * @returns The SGF string representation of the point.
- */
-export function unmapPoint(point: Point): string {
-  return String.fromCharCode(point.x + 97) + String.fromCharCode(point.y + 97);
-}
 
 // Helper functions for mapping/unmapping
 function mapNumber(val: string[]): number {
@@ -61,7 +41,7 @@ function unmapString(val: string): string[] {
  * @returns Array of Point objects.
  */
 export function mapPointList(vals: string[]): Point[] {
-  return vals.map(mapPoint);
+  return vals.map(Point.fromSGF);
 }
 
 /**
@@ -70,7 +50,7 @@ export function mapPointList(vals: string[]): Point[] {
  * @returns Array of SGF point strings.
  */
 export function unmapPointList(vals: Point[]): string[] {
-  return vals.map(unmapPoint);
+  return vals.map(Point.toSGF);
 }
 
 /**
@@ -82,7 +62,7 @@ export function mapLabelList(vals: string[]): [Point, string][] {
   // Each value is like "aa:label"
   return vals.map((v) => {
     const idx = v.indexOf(':');
-    return [mapPoint(v.slice(0, 2)), v.slice(idx + 1)];
+    return [Point.fromSGF(v.slice(0, 2)), v.slice(idx + 1)];
   });
 }
 
@@ -92,7 +72,7 @@ export function mapLabelList(vals: string[]): [Point, string][] {
  * @returns Array of SGF label strings.
  */
 export function unmapLabelList(vals: [Point, string][]): string[] {
-  return vals.map(([pt, label]) => unmapPoint(pt) + ':' + label);
+  return vals.map(([pt, label]) => Point.toSGF(pt) + ':' + label);
 }
 
 /**
@@ -104,7 +84,7 @@ export function mapLineList(vals: string[]): [Point, Point][] {
   // Each value is like "aa:bb"
   return vals.map((v) => {
     const [a, b] = v.split(':');
-    return [mapPoint(a), mapPoint(b)];
+    return [Point.fromSGF(a), Point.fromSGF(b)];
   });
 }
 
@@ -114,7 +94,7 @@ export function mapLineList(vals: string[]): [Point, Point][] {
  * @returns Array of SGF line strings.
  */
 export function unmapLineList(vals: [Point, Point][]): string[] {
-  return vals.map(([a, b]) => unmapPoint(a) + ':' + unmapPoint(b));
+  return vals.map(([a, b]) => Point.toSGF(a) + ':' + Point.toSGF(b));
 }
 
 function mapAP(val: string[]): [string, string] {
@@ -145,19 +125,19 @@ function unmapFG(val: [number, string] | null): string[] {
 function mapVW(val: string[]): [Point, Point] {
   // VW[aa:bb]
   const [a, b] = val[0].split(':');
-  return [mapPoint(a), mapPoint(b)];
+  return [Point.fromSGF(a), Point.fromSGF(b)];
 }
 
 function unmapVW(val: [Point, Point]): string[] {
-  return [unmapPoint(val[0]) + ':' + unmapPoint(val[1])];
+  return [Point.toSGF(val[0]) + ':' + Point.toSGF(val[1])];
 }
 
-function mapPL(val: string[]): 'B' | 'W' {
-  return val[0] as 'B' | 'W';
+function mapPL(val: string[]): typeof Color.B | typeof Color.W {
+  return val[0] === 'B' ? Color.B : Color.W;
 }
 
-function unmapPL(val: 'B' | 'W'): string[] {
-  return [val];
+function unmapPL(val: typeof Color.B | typeof Color.W): string[] {
+  return [val === Color.B ? 'B' : 'W'];
 }
 
 /**
@@ -169,7 +149,7 @@ export function mapNullablePoint(val: string[]): Point | null {
   if (!val[0]) {
     return null;
   }
-  return mapPoint(val[0]);
+  return Point.fromSGF(val[0]);
 }
 
 /**
@@ -181,7 +161,7 @@ export function unmapNullablePoint(val: Point | null): string[] {
   if (val == null) {
     return [];
   }
-  return [unmapPoint(val)];
+  return [Point.toSGF(val)];
 }
 
 function mapNull(_val: string[]): null {

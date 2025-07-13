@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { StandardSGFPropertyMapper } from '../src/mapper/StandardSGFPropertyMapper';
-import type { Point, StandardSGFProperties } from '../src/sgfTypes';
+import { StandardSGFProperties } from '../src/sgfTypes';
+import { Color, Point } from '@wgojs/common';
 
 function pt(x: number, y: number): Point {
   return { x, y };
@@ -90,8 +91,8 @@ describe('StandardSGFPropertyMapper', () => {
   });
 
   test('PL', () => {
-    roundtrip('PL', ['B'], 'B');
-    roundtrip('PL', ['W'], 'W');
+    roundtrip('PL', ['B'], Color.Black);
+    roundtrip('PL', ['W'], Color.White);
   });
 
   test('C/DM/GB/GW/HO/N/UC/BM/DO/IT/TE/CA/AN/BR/BT/CP/DT/EV/GN/GC/ON/OT/PB/PC/PW/RE/RO/RU/SO/US/WR/WT (string)', () => {

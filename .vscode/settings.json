@@ -7,10 +7,11 @@
         "jsgf",
         "kifu",
         "KOMI",
+        "Tesuji",
         "wgojs"
     ],
     "search.exclude": {
-        "dist/**/*": true,
+        "**/dist/**/*": true,
         "docs/**/*": true
     },
     "files.eol": "\n"

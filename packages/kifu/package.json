@@ -1,14 +1,13 @@
 {
-  "name": "@wgojs/sgf",
+  "name": "@wgojs/kifu",
   "version": "3.0.0-alpha.10",
-  "description": "SGF (Smart Game Format) parser for JavaScript/TypeScript",
+  "description": "Kifu (game record) library for JavaScript/TypeScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "type": "module",
   "scripts": {
-    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "clean": "rimraf dist",
     "build": "tsc",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "repository": {
     "type": "git",
@@ -22,6 +21,7 @@
   },
   "homepage": "http://waltheri.github.io/wgo.js",
   "dependencies": {
-    "@wgojs/common": "*"
+    "@wgojs/common": "*",
+    "@wgojs/sgf": "*"
   }
 }

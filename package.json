@@ -3,6 +3,7 @@
   "version": "3.0.0-alpha.10",
   "description": "JavaScript library for game of Go",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "rollup -c rollup.config.js",
@@ -36,8 +37,11 @@
     "ts-node": "^8.1.0",
     "tslib": "^2.0.1",
     "typedoc": "^0.25.1",
-    "typescript": "^4.9.5",
+    "typescript": "^5.8.3",
     "vite": "^4.5.0",
     "vitest": "^1.6.0"
-  }
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }
