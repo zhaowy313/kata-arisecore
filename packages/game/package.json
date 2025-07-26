@@ -1,0 +1,26 @@
+{
+  "name": "@wgojs/game",
+  "version": "3.0.0-alpha.10",
+  "description": "Go game library for JavaScript/TypeScript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/waltheri/wgo.js.git"
+  },
+  "keywords": ["go", "baduk", "weiqi", "rules", "evaluation", "game", "engine"],
+  "author": "Jan Prokop <thebestgoplayer@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/waltheri/wgo.js/issues"
+  },
+  "homepage": "http://waltheri.github.io/wgo.js",
+  "dependencies": {
+    "@wgojs/common": "*"
+  }
+}

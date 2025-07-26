@@ -3,6 +3,7 @@ import { Point } from './Point';
 
 /**
  * Represents one field on the board. It consists from coordinates and color.
+ * This type is similar to `Stone`, but it is used for fields so color can be empty.
  */
 export type Field = Point & {
   readonly color: Color;

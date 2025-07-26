@@ -559,7 +559,7 @@ describe('Type safety and TypeScript integration', () => {
     expect(badMove.type).toBe(AnnotationType.BadMove);
     expect(badMove.emphasized).toBe(true);
     expect(tesuji.type).toBe(AnnotationType.Tesuji);
-    expect(tesuji.emphasized).toBeUndefined();
+    expect(tesuji.emphasized).toBe(true);
   });
 
   test('NumericMoveAnnotation should have correct type constraints', () => {
