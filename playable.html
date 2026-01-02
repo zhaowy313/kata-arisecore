@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WGo.js Playable Board (Multi-Rules)</title>
+    <script type="text/javascript" src="wgo/wgo.min.js"></script>
+    <script type="text/javascript" src="wgo/wgo.player.min.js"></script>
+    <script type="text/javascript" src="wgo/scoremode.js"></script>
+    <link rel="stylesheet" type="text/css" href="wgo/wgo.player.css" />
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        #board {
+            width: 600px;
+            margin-bottom: 20px;
+        }
+        #controls {
+            text-align: center;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .control-group {
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        button:hover { background-color: #45a049; }
+        button.secondary { background-color: #f44336; }
+        button.secondary:hover { background-color: #d32f2f; }
+        button.info { background-color: #2196F3; }
+        button.info:hover { background-color: #0b7dda; }
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+        }
+        #status {
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        #score-output {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Play Go with Rules</h1>
+    
+    <div id="controls">
+        <div class="control-group">
+            <label for="ruleset">Ruleset: </label>
+            <select id="ruleset" onchange="resetBoard()">
+                <option value="Japanese">Japanese (Territory Scoring, Simple Ko)</option>
+                <option value="Chinese">Chinese (Area Scoring, Superko)</option>
+                <option value="AGA">AGA (Area Scoring, Superko, Pass Stones)</option>
+            </select>
+        </div>
+        
+        <div id="status">Turn: Black</div>
+        <div class="control-group">
+            <button class="secondary" onclick="resetBoard()">Reset Board</button>
+            <button class="info" onclick="toggleScoreMode()">Count Score</button>
+        </div>
+        <div id="score-output"></div>
+    </div>
+
+    <div id="board">
+        <!-- Board will be inserted here -->
+    </div>
+
+    <script>
+        var game;
+        var board;
+        var currentPlayer;
+        var scoreMode = null;
+        var currentRules = "Japanese";
+
+        // Configuration for different rulesets
+        // Note: 'scoring' is a custom property used by our score calculator, not WGo.Game
+        const ruleConfigs = {
+            'Japanese': { checkRepeat: 'KO', scoring: 'territory', komi: 6.5 },
+            'Chinese':  { checkRepeat: 'ALL', scoring: 'area', komi: 7.5 },
+            'AGA':      { checkRepeat: 'ALL', scoring: 'area', komi: 7.5 } 
+        };
+
+        function init() {
+            var element = document.getElementById("board");
+            
+            // Initialize board
+            board = new WGo.Board(element, {
+                width: 600,
+                section: {
+                    top: -0.5,
+                    left: -0.5,
+                    right: -0.5,
+                    bottom: -0.5
+                }
+            });
+
+            // Add click listener
+            board.addEventListener("click", function(x, y) {
+                if(scoreMode) return; // Don't play if in scoring mode
+                playMove(x, y);
+            });
+            
+            resetBoard();
+        }
+
+        function resetBoard() {
+            // End score mode if active
+            if(scoreMode) {
+                scoreMode.end();
+                scoreMode = null;
+                document.getElementById("score-output").style.display = "none";
+            }
+
+            // Get selected rules
+            var ruleSelect = document.getElementById("ruleset");
+            currentRules = ruleSelect.value;
+            var config = ruleConfigs[currentRules];
+
+            // Initialize Game with specific rule params
+            // WGo.Game(size, checkRepeat, allowRewrite, allowSuicide)
+            game = new WGo.Game(19, config.checkRepeat, false, false);
+            
+            currentPlayer = WGo.B;
+            updateBoard();
+            updateStatus();
+        }
+
+        function playMove(x, y) {
+            var result = game.play(x, y, currentPlayer);
+            
+            if (typeof result === "object") {
+                updateBoard();
+                currentPlayer = (currentPlayer === WGo.B) ? WGo.W : WGo.B;
+                updateStatus();
+            } else {
+                // Error codes: 1 (occupied), 2 (suicide), 3 (ko), 4 (superko)
+                var errorMsg = "Invalid move.";
+                if(result === 1) errorMsg = "Position occupied.";
+                if(result === 2) errorMsg = "Suicide is forbidden.";
+                if(result === 3) errorMsg = "Illegal Ko move.";
+                if(result === 4) errorMsg = "Illegal Board Repetition (Superko).";
+                alert(errorMsg);
+            }
+        }
+
+        function updateBoard() {
+            var state = game.getPosition();
+            board.removeAllObjects();
+            
+            for(var i = 0; i < state.size; i++) {
+                for(var j = 0; j < state.size; j++) {
+                    var color = state.get(i, j);
+                    if(color === WGo.B) board.addObject({x: i, y: j, c: WGo.B});
+                    else if(color === WGo.W) board.addObject({x: i, y: j, c: WGo.W});
+                }
+            }
+        }
+
+        function updateStatus() {
+            var text = (currentPlayer === WGo.B) ? "Black" : "White";
+            document.getElementById("status").innerText = "Turn: " + text + " (" + currentRules + " Rules)";
+        }
+
+        function toggleScoreMode() {
+            if(scoreMode) {
+                // Stop scoring
+                scoreMode.end();
+                scoreMode = null;
+                document.getElementById("score-output").style.display = "none";
+                board.setFrozen(false); // Unlock board
+            } else {
+                // Start scoring
+                var config = ruleConfigs[currentRules];
+                var outputDiv = document.getElementById("score-output");
+                outputDiv.style.display = "block";
+                outputDiv.innerHTML = "Click on dead stones to mark them.<br>Calculating...";
+                
+                // Override displayScore to handle Area Scoring (Chinese/AGA)
+                // We create a temporary subclass/override for the current instance
+                
+                scoreMode = new WGo.ScoreMode(game.getPosition(), board, config.komi, function(msg) {
+                     outputDiv.innerHTML = msg;
+                });
+
+                // Monkey-patch displayScore for Area scoring if needed
+                if(config.scoring === 'area') {
+                    scoreMode.displayScore = function() {
+                        var score = {
+                            black: [], white: [], neutral: [], 
+                            black_captured: [], white_captured: []
+                        };
+                        
+                        // Copy logic from original scoremode to classify stones
+                        // We need to count LIVING stones for Area scoring
+                        var blackStones = 0;
+                        var whiteStones = 0;
+
+                        for(var i = 0; i < this.position.size; i++) {
+                            for(var j = 0; j < this.position.size; j++) {
+                                var s = this.position.get(i,j); // Current state (modified by user clicks)
+                                var t = this.originalPosition.get(i,j); // Original state
+                                
+                                // Territory Candidates
+                                if(s == WGo.ScoreMode.state.BLACK_CANDIDATE) score.black.push({x: i, y: j, type: "mini", c: WGo.B});
+                                else if(s == WGo.ScoreMode.state.WHITE_CANDIDATE) score.white.push({x: i, y: j, type: "mini", c: WGo.W});
+                                else if(s == WGo.ScoreMode.state.NEUTRAL) score.neutral.push({x: i, y: j});
+                                
+                                // Dead Stones (Ghosted out)
+                                if(t == WGo.W && s != WGo.ScoreMode.state.WHITE_STONE) score.white_captured.push({x: i, y: j, type: "outline", c: WGo.W});
+                                else if(t == WGo.B && s != WGo.ScoreMode.state.BLACK_STONE) score.black_captured.push({x: i, y: j, type: "outline", c: WGo.B});
+
+                                // Living Stones (On board originally AND still marked as stone)
+                                if (t == WGo.B && s == WGo.ScoreMode.state.BLACK_STONE) blackStones++;
+                                if (t == WGo.W && s == WGo.ScoreMode.state.WHITE_STONE) whiteStones++;
+                            }
+                        }
+                        
+                        // Draw standard markup
+                        for(var i = 0; i < score.black_captured.length; i++) this.board.removeObjectsAt(score.black_captured[i].x, score.black_captured[i].y);
+                        for(var i = 0; i < score.white_captured.length; i++) this.board.removeObjectsAt(score.white_captured[i].x, score.white_captured[i].y);
+                        this.board.addObject(score.white_captured);
+                        this.board.addObject(score.black_captured);
+                        this.board.addObject(score.black);
+                        this.board.addObject(score.white);
+                        
+                        // Calculate Area Score
+                        // Chinese: Territory + Living Stones
+                        var blackArea = score.black.length + blackStones;
+                        var whiteArea = score.white.length + whiteStones + parseFloat(this.komi);
+
+                        var msg = "<p style='font-weight: bold;'>Area Scoring (" + currentRules + ")</p>";
+                        msg += "<p><strong>Black:</strong> " + score.black.length + " (Territory) + " + blackStones + " (Stones) = " + blackArea + "</p>";
+                        msg += "<p><strong>White:</strong> " + score.white.length + " (Territory) + " + whiteStones + " (Stones) + " + this.komi + " (Komi) = " + whiteArea + "</p>";
+                        
+                        if(blackArea > whiteArea) msg += "<p style='font-weight: bold; color: green;'>Black wins by " + (blackArea - whiteArea) + "</p>";
+                        else msg += "<p style='font-weight: bold; color: red;'>White wins by " + (whiteArea - blackArea) + "</p>";
+                        
+                        this.output(msg);
+                    };
+                }
+
+                scoreMode.start();
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
