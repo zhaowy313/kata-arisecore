@@ -1,5 +1,5 @@
 {
-  "name": "mobile-goban",
+  "name": "kata-arisecore-mobile",
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
