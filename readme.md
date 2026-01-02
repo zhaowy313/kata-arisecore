@@ -2,6 +2,12 @@
 
 `kata-arisecore` is a hybrid Go game project combining Next.js and Expo, built on top of the WGo.js library.
 
+## Project Structure
+
+- `/web`: Next.js web application (WGo.js WebView host)
+- `/mobile`: Expo mobile application (React Native WebView client)
+- `/core`: The core WGo.js game engine logic
+
 WGo is written in javascript with help of HTML5 and WGo applications should work fine in all new browsers, even on Androids and iPhones.
 Unfortunately it won't work on Internet Explorer 8 and lower, because of absence of canvas element, which is crucial for drawing of a board.
 
